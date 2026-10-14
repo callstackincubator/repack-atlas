@@ -55,6 +55,7 @@
     "test": "tsx --tsconfig tsconfig.test.json --test \"tests/**/*.test.ts\" \"tests/**/*.test.tsx\"",
     "check:vendored": "node scripts/vendored-check.mjs",
     "check:publish": "node scripts/publish-check.mjs",
+    "publish:preflight": "node scripts/publish-preflight.mjs",
     "check:commits": "node scripts/commit-check.mjs",
     "agent:sync": "node scripts/agent-sync.mjs",
     "agent:check": "node scripts/agent-sync.mjs --check",

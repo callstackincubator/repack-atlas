@@ -79,6 +79,8 @@ pnpm check:vendored # CI: every vendored file in VENDORED.md with a commit
                  # sha + Copyright header (exit 1 on drift)
 pnpm check:publish # CI: the publish manifest is honest (every entry point
                  # ships in the real tarball; no stale-dist publish)
+pnpm publish:preflight # before a publish: 6 gates on the installed tarball
+                 # (install, bin, public API, doctor behavior, reproducible pack)
 pnpm check:commits # CI: Conventional Commits + no AI attribution on
                  # origin/main..HEAD (or --range <base>..<head>, --message)
 ```
