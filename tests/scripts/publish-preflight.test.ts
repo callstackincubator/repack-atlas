@@ -13,6 +13,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { test } from 'node:test';
 import {
+  gateBin,
   gateManifest,
   gateNames,
 } from '../../scripts/publish-preflight.mjs';
@@ -90,4 +91,48 @@ test('the gate list is the set the runbook promises', () => {
     'G5 behavior',
     'G6 reproducibility',
   ]);
+});
+
+// G3 is the gate that answers "does the binary a user gets actually run". It
+// used to shell out to `node dist/cli.js`, which keeps working even when the
+// installed bin is broken: a cli.js without a shebang prints the version fine
+// under node and dies with a syntax error when run through
+// node_modules/.bin/repack-atlas. These tests pin the evidence shape that
+// distinguishes the two.
+test('G3 fails when the installed bin errors, even though node dist/cli.js works', () => {
+  const result = gateBin({
+    binCode: 2,
+    binOut:
+      "line 1: syntax error near unexpected token `('\n",
+    cliCode: 0,
+    cliStdout: 'repack-atlas 0.0.1',
+    version: '0.0.1',
+  });
+  assert.equal(result.gate, 'G3 bin');
+  assert.equal(result.status, 'FAIL');
+  assert.match(result.detail, /installed bin/);
+});
+
+test('G3 fails when the installed bin prints a different version than the tarball', () => {
+  const result = gateBin({
+    binCode: 0,
+    binOut: 'repack-atlas 0.0.1',
+    cliCode: 0,
+    cliStdout: 'repack-atlas 0.0.1',
+    version: '0.2.0',
+  });
+  assert.equal(result.status, 'FAIL');
+  assert.match(result.detail, /0\.2\.0/);
+});
+
+test('G3 passes only when the installed bin itself prints the packed version', () => {
+  const result = gateBin({
+    binCode: 0,
+    binOut: 'repack-atlas 0.0.1',
+    cliCode: 0,
+    cliStdout: 'repack-atlas 0.0.1',
+    version: '0.0.1',
+  });
+  assert.equal(result.status, 'PASS');
+  assert.equal(result.detail, 'repack-atlas 0.0.1 via node_modules/.bin');
 });

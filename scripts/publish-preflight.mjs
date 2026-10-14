@@ -29,6 +29,7 @@
 import { execFileSync, spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import {
+  mkdirSync,
   mkdtempSync,
   readdirSync,
   readFileSync,
@@ -85,15 +86,28 @@ function run(cmd, args, opts = {}) {
   };
 }
 
-/** Pack the repo into `dir`; returns { tarball, files } . */
+/**
+ * Pack the repo into a directory of its own; returns { tarball, files, hash }.
+ *
+ * Each run gets its own directory on purpose: pointed at one directory twice,
+ * the listing below finds the first tarball again and reports two identical
+ * packs while only one pack wrote bytes.
+ */
 function packInto(dir) {
+  mkdirSync(dir, { recursive: true });
   execFileSync('pnpm', ['pack', '--pack-destination', dir], {
     cwd: REPO_ROOT,
     stdio: 'pipe',
     maxBuffer: 64 * 1024 * 1024,
   });
-  const name = readdirSync(dir).find((entry) => entry.endsWith('.tgz'));
-  if (name === undefined) throw new Error('pnpm pack produced no tarball');
+  const written = readdirSync(dir).filter((entry) => entry.endsWith('.tgz'));
+  if (written.length === 0) throw new Error('pnpm pack produced no tarball');
+  if (written.length > 1) {
+    throw new Error(
+      `pack directory ${dir} holds ${written.length} tarballs; each pack needs a clean one`
+    );
+  }
+  const name = written[0];
   const tarball = join(dir, name);
   const files = execFileSync('tar', ['tzf', tarball], { encoding: 'utf8' })
     .split('\n')
@@ -110,6 +124,15 @@ function packInto(dir) {
  * @returns {GateResult}
  */
 export function gateManifest(evidence) {
+  if (evidence.manifest.name !== PACKAGE_NAME) {
+    return {
+      gate: 'G1 manifest',
+      status: 'FAIL',
+      detail: `package-name-drift: manifest.name is ${JSON.stringify(
+        evidence.manifest.name
+      )} but this runbook publishes ${PACKAGE_NAME}`,
+    };
+  }
   const violations = [
     ...validateManifest(evidence.manifest, {
       packedFiles: evidence.packedFiles,
@@ -160,6 +183,51 @@ export function collectEvidence(packed) {
   };
 }
 
+/**
+ * G3: does the binary a user actually gets run, and print the packed version?
+ *
+ * Pure, because the trap here is invisible from the outside: running
+ * `node dist/cli.js` succeeds even when the installed bin is broken (a missing
+ * shebang, a bad bin target, a non-executable file). The evidence that decides
+ * it is the exit code of `node_modules/.bin/<bin>`, kept separate from the
+ * `node dist/cli.js` run so the failure message can name the difference.
+ *
+ * @param {{ binCode: number|null, binOut: string, cliCode: number|null,
+ *   cliStdout: string, version: string, binName?: string }} evidence
+ * @returns {GateResult}
+ */
+export function gateBin(evidence) {
+  const bin = evidence.binName ?? 'repack-atlas';
+  const expected = `repack-atlas ${evidence.version}`;
+  const binLine = (evidence.binOut || '').trim().split('\n')[0] ?? '';
+  if (evidence.binCode !== 0) {
+    const cliWorks = evidence.cliCode === 0;
+    return {
+      gate: 'G3 bin',
+      status: 'FAIL',
+      detail:
+        `installed bin exited ${evidence.binCode}` +
+        ` (${JSON.stringify(binLine)})` +
+        (cliWorks
+          ? ` while \`node dist/cli.js\` printed "${evidence.cliStdout.trim()}"` +
+            ' — the bin itself is broken (shebang or bin target), users cannot run it'
+          : ''),
+    };
+  }
+  if (binLine !== expected) {
+    return {
+      gate: 'G3 bin',
+      status: 'FAIL',
+      detail: `expected "${expected}" from node_modules/.bin/${bin}, got ${JSON.stringify(binLine)}`,
+    };
+  }
+  return {
+    gate: 'G3 bin',
+    status: 'PASS',
+    detail: `${binLine} via node_modules/.bin`,
+  };
+}
+
 /** @returns {string|undefined} the canonical origin url when git can answer. */
 function originUrl() {
   const out = run('git', ['remote', 'get-url', 'origin'], { cwd: REPO_ROOT });
@@ -191,26 +259,52 @@ function probeInstalledArtifact(packed, probeDir) {
       { gate: 'G5 behavior', status: 'SKIP', detail: 'not installed' },
     ];
   }
-  results.push({
-    gate: 'G2 install',
-    status: 'PASS',
-    detail: `fresh project installed ${PACKAGE_NAME}`,
-  });
+  // Evidence, not intent: the installed manifest is what proves the install
+  // landed under the expected name, so a hardcoded name cannot fake a PASS.
+  let installedVersion;
+  try {
+    installedVersion = String(
+      JSON.parse(
+        readFileSync(join(probeDir, 'node_modules', ...PACKAGE_NAME.split('/'), 'package.json'), 'utf8')
+      ).version
+    );
+  } catch {
+    installedVersion = undefined;
+  }
+  results.push(
+    installedVersion === packed.version
+      ? {
+          gate: 'G2 install',
+          status: 'PASS',
+          detail: `fresh project installed ${PACKAGE_NAME}@${installedVersion}`,
+        }
+      : {
+          gate: 'G2 install',
+          status: 'FAIL',
+          detail:
+            `npm install exited ${installed.code} but ${PACKAGE_NAME}@${packed.version}` +
+            ` is not in node_modules (found ${JSON.stringify(installedVersion)})`,
+        }
+  );
 
   const pkgDir = join(probeDir, 'node_modules', ...PACKAGE_NAME.split('/'));
   const cli = join(pkgDir, 'dist', 'cli.js');
 
+  // The bin the user types, resolved by npm inside the probe project. This is
+  // the only way to see a broken shebang or bin target; `node dist/cli.js`
+  // hides both, and is kept only as a diagnostic for the failure message.
+  const installedBin = run(join(probeDir, 'node_modules', '.bin', 'repack-atlas'), ['--version'], {
+    cwd: probeDir,
+  });
   const version = run(process.execPath, [cli, '--version'], { cwd: probeDir });
   results.push(
-    version.stdout.trim() === `repack-atlas ${packed.version}`
-      ? { gate: 'G3 bin', status: 'PASS', detail: version.stdout.trim() }
-      : {
-          gate: 'G3 bin',
-          status: 'FAIL',
-          detail: `expected "repack-atlas ${packed.version}", got ${JSON.stringify(
-            (version.stdout || version.stderr).trim().split('\n')[0]
-          )}`,
-        }
+    gateBin({
+      binCode: installedBin.code,
+      binOut: installedBin.stdout || installedBin.stderr,
+      cliCode: version.code,
+      cliStdout: version.stdout,
+      version: packed.version,
+    })
   );
 
   const imports = PUBLIC_SUBPATHS.map(
@@ -290,7 +384,7 @@ export async function main(argv = process.argv.slice(2)) {
   try {
     let packed;
     try {
-      packed = packInto(scratch);
+      packed = packInto(join(scratch, 'pack-a'));
     } catch (error) {
       console.error(`publish-preflight: could not pack: ${error.message}`);
       return 2;
@@ -301,7 +395,7 @@ export async function main(argv = process.argv.slice(2)) {
 
     // G6 first: if two packs differ, everything below describes a moving
     // artifact and none of it means anything.
-    const repacked = packInto(scratch);
+    const repacked = packInto(join(scratch, 'pack-b'));
     const reproducibility =
       repacked.hash === packed.hash
         ? {
