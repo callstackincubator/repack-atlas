@@ -1,5 +1,5 @@
 {
-  "name": "repack-atlas",
+  "name": "@callstack/repack-atlas",
   "version": "0.0.1",
   "description": "Local developer tooling for React Native Module Federation workspaces built with Re.Pack.",
   "license": "MIT",
@@ -7,13 +7,7 @@
   "bin": {
     "repack-atlas": "./dist/cli.js"
   },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    },
     "./plugin": {
       "types": "./dist/repack-bridge/plugin.d.ts",
       "default": "./dist/repack-bridge/plugin.js"
@@ -26,15 +20,34 @@
   "files": [
     "dist"
   ],
+  "keywords": [
+    "react-native",
+    "module-federation",
+    "repack",
+    "rspack",
+    "monorepo",
+    "doctor",
+    "devtools"
+  ],
   "engines": {
     "node": ">=22.13"
   },
   "packageManager": "pnpm@11.23.0",
   "publishConfig": {
+    "registry": "https://registry.npmjs.org/",
     "access": "public"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/callstackincubator/repack-atlas.git"
+  },
+  "bugs": {
+    "url": "https://github.com/callstackincubator/repack-atlas/issues"
+  },
+  "homepage": "https://github.com/callstackincubator/repack-atlas#readme",
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "prepack": "tsc -p tsconfig.json",
     "pretest": "pnpm build",
     "typecheck": "tsc -p tsconfig.test.json --noEmit && tsc -p tsconfig.e2e.json --noEmit",
     "lint": "eslint .",
