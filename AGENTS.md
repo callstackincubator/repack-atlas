@@ -77,12 +77,15 @@ pnpm agent:sync  # regenerate skill symlinks + AGENTS.md tables
 pnpm agent:check # CI-mode verification of the above (exit 1 on drift)
 pnpm check:vendored # CI: every vendored file in VENDORED.md with a commit
                  # sha + Copyright header (exit 1 on drift)
+pnpm check:publish # CI: the publish manifest is honest (every entry point
+                 # ships in the real tarball; no stale-dist publish)
 pnpm check:commits # CI: Conventional Commits + no AI attribution on
                  # origin/main..HEAD (or --range <base>..<head>, --message)
 ```
 
 CI (`.github/workflows/ci.yml`) is light: lint, typecheck, build, test,
-`agent:check` and `check:vendored` in one Linux / Node 22 job per PR. The full
+`agent:check`, `check:vendored` and `check:publish` in one Linux / Node 22 job
+per PR. The full
 matrix (macOS + Linux × Node 22/24) and the Playwright studio-e2e job live in
 `ci-full.yml` and run only when a maintainer adds the `ready-to-merge` label
 (or via `workflow_dispatch`). The PR gates live in `pr-checks.yml`: PR title,

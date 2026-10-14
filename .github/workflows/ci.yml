@@ -43,3 +43,5 @@ jobs:
         run: pnpm agent:check
       - name: Vendored provenance check
         run: pnpm check:vendored
+      - name: Publish manifest check
+        run: pnpm check:publish
