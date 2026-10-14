@@ -54,6 +54,7 @@
     "lint:fix": "eslint . --fix",
     "test": "tsx --tsconfig tsconfig.test.json --test \"tests/**/*.test.ts\" \"tests/**/*.test.tsx\"",
     "check:vendored": "node scripts/vendored-check.mjs",
+    "check:publish": "node scripts/publish-check.mjs",
     "check:commits": "node scripts/commit-check.mjs",
     "agent:sync": "node scripts/agent-sync.mjs",
     "agent:check": "node scripts/agent-sync.mjs --check",
@@ -64,6 +65,8 @@
     "@callstack/repack": "*"
   },
   "devDependencies": {
+    "@changesets/changelog-github": "^0.7.0",
+    "@changesets/cli": "^2.31.1",
     "@eslint/js": "^9.39.5",
     "@playwright/test": "^1.63.0",
     "@types/node": "^24.0.0",
