@@ -265,3 +265,59 @@ at every commit, not just at the tip.
   flake. `odd/tasks/` is tracked in this repo by precedent (`docs(odd):` commits),
   and this doc was scanned for internal references before committing: no ticket
   IDs, no Notion/Slack links, no memory-tool references.
+- **L18** (independent verification of the PR, 2026-10-14, read-only verifier +
+  my own reproduction of every finding before fixing it). Verdict S1-S5 PASS, but
+  it found three real blockers and seven vacuous passes; fixed in three commits
+  (`2d283fe`, `1558e37`, `04a1e9f`), each with the test that was RED first:
+  1. **G3 certified a broken binary.** It ran `node dist/cli.js --version`, which
+     succeeds with no shebang. Reproduced in a scratch clone: with the shebang
+     stripped, G3 said PASS while the *installed* bin died with
+     `line 1: syntax error` and exit 2. G3 now runs `node_modules/.bin/repack-atlas`
+     and keeps `node dist/cli.js` only as a diagnostic in the failure text.
+     Poison test at the fix commit: `G3 bin FAIL … the bin itself is broken
+     (shebang or bin target), users cannot run it`, preflight exit 1.
+  2. **CONTRIBUTING's changeset example used the pre-rename key** `"repack-atlas"`,
+     which makes `changeset status` fail with "is not in the workspace" — i.e. the
+     runbook broke the release step it documents. Fixed, with a sentence saying why.
+  3. **False claims at HEAD** (mine, from the same session): the decision doc said
+     "0 commits ahead, branch not on origin" after I had pushed, quoted a G6 hash
+     that no longer existed, and the CI table kept test counts 948/274 and
+     `repack-atlas@<v>`. All corrected to observed values.
+  4. **Vacuous guard rules** — `prepack: "echo stale"` satisfied the stale-dist
+     rule; a missing README silently disabled the dead-link rule; `self-dependency`
+     matched the name exactly, so the rename disarmed the very rule written for the
+     L11 link incident; `repository-mismatch` vanished whenever git could not answer
+     (and was falsely red for a fork clone — now anchored on
+     `.changeset/config.json`, which is repo content, not origin). Six tests, all
+     RED first, all GREEN now.
+  5. **G2 printed a package name it never read** (hardcoded constant) and **G6 could
+     compare one file twice** (both packs into one directory). G2 now needs the
+     installed manifest's version; G6 packs into two directories and treats two
+     tarballs in one as an error.
+  Credit path proved in a scratch clone against the live API, not from docs:
+  `commit: <pushed sha>` → `[#79] [ffbf781] Thanks [@gedu]! - …` and `0.0.1 →
+  0.1.0`; `pr: #79` → PR link + credit, no commit link; `pr: #79` with no
+  `GITHUB_TOKEN` → refuses and applies nothing. So a release PR self-references
+  with `pr: #<n>`.
+  Recorded as two honest limits, not fixed here: the gates prove **`pnpm pack`**
+  bytes (`npm pack` keeps `prepack`/`packageManager`; different tarball), and G1
+  reads the **working-tree** manifest, so "G1 PASS" is a statement about the source
+  manifest, not the published one. Both are in the decision doc §7.
+  Unscoped `repack-atlas/plugin|introspection` specifiers left in README,
+  CONTRIBUTING, PRD, demo-showcase and two skills: renamed everywhere they tell a
+  user what to import, so the docs do not break at publish time.
+  Observed after the fixes: `check:commits` OK 10 · `check:publish` OK ·
+  `check:vendored` OK · `agent:check` OK · `lint` 0 · `typecheck` 0 ·
+  **test 966/966** · `publish:preflight` 6/6 (`d8ad6427ee13…`).
+  Still unpublished: no `pnpm publish`, no tag, registry 404.
+- **L19** (RDD review, reported as incomplete rather than closed). ASSESS returned
+  risk `high` → review due. START was rejected once (`lenses-invalid`, no lineage
+  created, no mutation) for an over-long `lensesReason`; the retry created
+  `review-5a4b6aba79584669` at tier high with three lenses. The grouped capture
+  failed (`pi-host-relay-transport-failure`, 0 submitted), then `review-risk` and
+  `review-readability` were captured one slot at a time, and `review-reliability`
+  produced **no text twice** with `stopReason: length` (≈7 min each run, a 2785-line
+  candidate). The lineage is therefore still `reviewing` with one slot reoffered;
+  I did not force a third attempt or fabricate a verdict, and nothing was
+  acknowledged. The independent verifier above is the risk-gated verification the
+  ASSESS plan required, and it is what produced L18.
