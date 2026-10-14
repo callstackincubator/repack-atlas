@@ -48,10 +48,15 @@ function manifestWith(overrides = {}) {
   };
 }
 
+// README.md and LICENSE are in every real tarball (npm always includes them),
+// so the happy-path fixture carries them; `required-file-missing` has its own
+// test that drops them.
 const PACKED = [
   'dist/cli.js',
   'dist/repack-bridge/plugin.js',
   'dist/repack-bridge/introspection-plugin.js',
+  'README.md',
+  'LICENSE',
 ];
 
 const rules = (violations: { rule: string }[]) => violations.map((v) => v.rule);
@@ -227,4 +232,81 @@ test('the real repo manifest passes the CI step', async () => {
   // This is the regression net: it is the same command CI runs.
   const { stdout } = await exec('node', ['scripts/publish-check.mjs'], { cwd: repoRoot });
   assert.match(stdout, /publish-check: OK/);
+});
+
+// Every rule below was added because an independently-found **vacuous pass**
+// let the guard say OK on an artifact that must not ship. A rule that cannot
+// fail is worse than no rule: it is a green light with nothing behind it. Each
+// test reproduces the exact shape that used to pass.
+test('a no-op prepack is not a stale-dist guard', () => {
+  // dist/ is gitignored, so "prepack" only guards a publish if it builds.
+  const violations = validateManifest(
+    manifestWith({ scripts: { prepack: 'echo stale' } }),
+    { packedFiles: PACKED }
+  );
+  assert.ok(rules(violations).includes('stale-dist-guard-missing'));
+});
+
+test('a prepack that does not build is not a stale-dist guard', () => {
+  const violations = validateManifest(
+    manifestWith({ scripts: { prepack: 'node scripts/nope.mjs' } }),
+    { packedFiles: PACKED }
+  );
+  assert.ok(rules(violations).includes('stale-dist-guard-missing'));
+});
+
+test('the shipped README and LICENSE are required in the artifact', () => {
+  // Without this, deleting README.md silently disables the dead-link rule too.
+  const violations = validateManifest(manifestWith(), {
+    packedFiles: ['dist/cli.js'],
+  });
+  const found = rules(violations);
+  assert.ok(found.includes('required-file-missing'), found.join(','));
+});
+
+test('a self-dependency under the old package name is still a self-dependency', () => {
+  // The rename to @callstack/repack-atlas disarmed the original rule, whose
+  // match was name-exact. A stray `pnpm link` writes the unscoped name.
+  const violations = validateManifest(
+    manifestWith({ name: '@callstack/repack-atlas', dependencies: { 'repack-atlas': 'link:' } }),
+    { packedFiles: PACKED }
+  );
+  assert.ok(rules(violations).includes('self-dependency'));
+});
+
+test('a mismatched repository url is reported even when git cannot answer', () => {
+  // originUrl() swallows a git failure to undefined; the rule used to
+  // short-circuit there, so an unverified manifest passed.
+  const violations = validateManifest(
+    manifestWith({
+      repository: { type: 'git', url: 'https://github.com/someone/wrong-repo.git' },
+    }),
+    { packedFiles: PACKED, expectedRepositoryUrl: 'https://github.com/callstackincubator/repack-atlas.git' }
+  );
+  assert.ok(rules(violations).includes('repository-mismatch'));
+});
+
+test('publishing through a custom script is still publishing', () => {
+  // The workflow rules matched literal `pnpm publish`/`changeset publish`, so a
+  // job shelling out to scripts/ship-it.sh hid an NPM_TOKEN.
+  const violations = validateWorkflows([
+    {
+      path: '.github/workflows/ship.yml',
+      text:
+        'jobs:\n  publish:\n    runs-on: ubuntu-latest\n    env:\n      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}\n    steps:\n      - run: ./scripts/ship-it.sh\n',
+    },
+  ]);
+  assert.ok(rules(violations).includes('publish-token-secret'), JSON.stringify(violations));
+});
+
+test('a fork clone is not falsely red: the canonical repo is the reference', () => {
+  // Contributors clone forks, so origin is a personal fork while repository.url
+  // names upstream. Comparing only against origin reported a violation on a
+  // correct manifest, which trains people to ignore the guard.
+  const violations = validateManifest(manifestWith(), {
+    packedFiles: PACKED,
+    repositoryUrl: 'https://github.com/someone/fork.git',
+    expectedRepositoryUrl: 'https://github.com/o/r.git',
+  });
+  assert.deepEqual(violations, []);
 });

@@ -52,7 +52,8 @@ const REQUIRED_FIELDS = [
 
 /**
  * @typedef {{ rule: string, detail: string }} Violation
- * @typedef {{ packedFiles: string[], repositoryUrl?: string }} ManifestContext
+ * @typedef {{ packedFiles: string[], repositoryUrl?: string,
+ *   expectedRepositoryUrl?: string }} ManifestContext
  * @typedef {{ path: string, text: string }} WorkflowSource
  */
 
@@ -211,12 +212,30 @@ export function validateManifest(manifest, context) {
     scripts !== null && typeof scripts === 'object'
       ? /** @type {Record<string, unknown>} */ (scripts).prepack
       : undefined;
-  if (typeof prepack !== 'string' || prepack === '') {
+  // Any non-empty string is not a guard: `prepack: "echo stale"` satisfies a
+  // field check and still ships whatever stale dist/ the tree happens to hold.
+  // The guard exists because dist/ is gitignored, so it has to build.
+  const builds =
+    typeof prepack === 'string' &&
+    (/\btsc\b/.test(prepack) || /\b(?:pnpm|npm|yarn)\s+run\s+build\b/.test(prepack));
+  if (!builds) {
     violations.push({
       rule: 'stale-dist-guard-missing',
       detail:
-        'scripts.prepack must build dist before packing: dist/ is gitignored, so a publish without a build ships whatever stale tree is left',
+        'scripts.prepack must build dist before packing (tsc or `pnpm run build`): dist/ is gitignored, so a publish without a build ships whatever stale tree is left',
     });
+  }
+
+  // README.md and LICENSE ship even with `files: ["dist"]` (npm/pnpm always
+  // include them), so a manifest that loses them is broken — and losing README
+  // silently disables the dead-link rule below, which is how a guard goes quiet.
+  for (const required of ['README.md', 'LICENSE']) {
+    if (!packed.has(required)) {
+      violations.push({
+        rule: 'required-file-missing',
+        detail: `${required} is not in the packed artifact: users get no license text on the npm page and no README`,
+      });
+    }
   }
 
   const repository =
@@ -232,12 +251,16 @@ export function validateManifest(manifest, context) {
       detail:
         'repository.url must name the git repo: npm validates it against the publishing repo for provenance',
     });
-  } else if (context.repositoryUrl !== undefined) {
-    const expected = githubSlug(context.repositoryUrl);
+  } else if (context.repositoryUrl !== undefined || context.expectedRepositoryUrl !== undefined) {
+    // An explicit expectation outranks origin, and origin outranks silence:
+    // swallowing "git could not answer" into a pass is how this rule went
+    // vacuous for a manifest naming someone else's repo.
+    const reference = context.expectedRepositoryUrl ?? context.repositoryUrl;
+    const expected = githubSlug(reference);
     if (expected !== null && expected !== slug) {
       violations.push({
         rule: 'repository-mismatch',
-        detail: `repository.url is ${slug}, expected ${context.repositoryUrl} (provenance is bound to the publishing repo)`,
+        detail: `repository.url is ${slug}, expected ${reference} (provenance is bound to the publishing repo)`,
       });
     }
   }
@@ -246,13 +269,21 @@ export function validateManifest(manifest, context) {
   // dependencies and an override in pnpm-workspace.yaml; the self-reference
   // then reaches the published tarball. Seen happening for real.
   const name = typeof manifest.name === 'string' ? manifest.name : '';
+  // Match the base name too: the rename to @callstack/repack-atlas disarmed the
+  // original name-exact rule, while a stray `pnpm link` keeps writing the
+  // unscoped `repack-atlas` (observed for real, Log L11).
+  const base = name.startsWith('@') ? name.slice(name.indexOf('/') + 1) : name;
   for (const field of ['dependencies', 'peerDependencies', 'optionalDependencies']) {
     const deps = manifest[field];
-    if (name !== '' && deps !== null && typeof deps === 'object' && name in deps) {
-      violations.push({
-        rule: 'self-dependency',
-        detail: `${field} declares ${name} — the package cannot depend on itself (a stray \`pnpm link\` in this repo does exactly this)`,
-      });
+    if (name === '' || deps === null || typeof deps !== 'object') continue;
+    for (const key of Object.keys(deps)) {
+      const keyBase = key.startsWith('@') ? key.slice(key.indexOf('/') + 1) : key;
+      if (key === name || (base !== '' && keyBase === base)) {
+        violations.push({
+          rule: 'self-dependency',
+          detail: `${field} declares ${key} — the package cannot depend on itself (a stray \`pnpm link\` in this repo does exactly this)`,
+        });
+      }
     }
   }
 
@@ -292,10 +323,20 @@ export function validateManifest(manifest, context) {
  * even though its publish command is a maintainer-chosen script: that is how a
  * long-lived token sneaks into a repo that is supposed to use OIDC.
  */
+/**
+ * Does this workflow take part in publishing? Matched broadly on purpose: the
+ * first version only recognised literal `pnpm publish` / `changeset publish`,
+ * so a job that shelled out to a custom script, or used a third-party publish
+ * action, hid an NPM_TOKEN from the guard. A token in any workflow is the thing
+ * the decision forbids, so over-matching here is the safe direction.
+ */
 function publishes(text) {
   return (
     /(?:pnpm|npm|yarn)\s+(?:-r\s+)?(?:publish|release)\b|changeset\s+publish/.test(text) ||
-    /uses:\s*changesets\/action@/.test(text)
+    /uses:\s*changesets\/action@/.test(text) ||
+    /(?:publish|ship|release)[\w-]*\.(?:sh|mjs|js|py)\b/i.test(text) ||
+    /uses:\s*[^\s]*(?:npm-publish|npm-publish-action|setup-node)[^\s]*@/.test(text) ||
+    /secrets\.(?:NPM_TOKEN|NODE_AUTH_TOKEN)\b/.test(text)
   );
 }
 
@@ -318,7 +359,12 @@ export function validateWorkflows(workflows) {
         detail: `${file} uses secrets.${token[1]} — releases use npm trusted publishing (OIDC), not long-lived tokens`,
       });
     }
-    if (!/^\s*id-token:\s*write\s*$/m.test(text)) {
+    // Only a command that publishes needs the OIDC token; a workflow that merely
+    // mentions publishing must not be told to grant it.
+    const runsPublish =
+      /(?:pnpm|npm|yarn)\s+(?:-r\s+)?(?:publish|release)\b|changeset\s+publish/.test(text) ||
+      /uses:\s*changesets\/action@/.test(text);
+    if (runsPublish && !/^\s*id-token:\s*write\s*$/m.test(text)) {
       violations.push({
         rule: 'publish-id-token-missing',
         detail: `${file} publishes but has no "id-token: write" permission, so it cannot get an OIDC token`,
@@ -373,6 +419,28 @@ function readPackedReadme(tarballPath) {
     });
   } catch {
     return null;
+  }
+}
+
+/**
+ * The upstream repo this project publishes to, read from the repository itself
+ * rather than from `origin`. `.changeset/config.json` names it for the changelog
+ * links, so the reference survives a fork clone whose origin is a personal fork
+ * — which is what made an origin-only comparison falsely red.
+ *
+ * @returns {string | undefined}
+ */
+function canonicalRepoUrl() {
+  try {
+    const changelog = JSON.parse(
+      readFileSync(join(REPO_ROOT, '.changeset', 'config.json'), 'utf8')
+    ).changelog;
+    const repo = Array.isArray(changelog) ? changelog[1]?.repo : undefined;
+    return typeof repo === 'string' && repo.includes('/')
+      ? `https://github.com/${repo}.git`
+      : undefined;
+  } catch {
+    return undefined;
   }
 }
 
@@ -448,6 +516,7 @@ export function main(argv = process.argv.slice(2)) {
   const violations = [
     ...validateManifest(manifest, {
       packedFiles,
+      expectedRepositoryUrl: canonicalRepoUrl(),
       repositoryUrl: originUrl(),
       readme: readmeText,
     }),

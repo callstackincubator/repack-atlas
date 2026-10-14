@@ -8,6 +8,11 @@ export interface ManifestContext {
   packedFiles: string[];
   /** Canonical origin url, when it could be read. */
   repositoryUrl?: string;
+  /**
+   * The upstream repo this project publishes to, from `.changeset/config.json`.
+   * Outranks `repositoryUrl`, and unlike origin it survives a fork clone.
+   */
+  expectedRepositoryUrl?: string;
   /** README exactly as packed, for the dead-link rule. */
   readme?: string;
 }
