@@ -14,7 +14,7 @@ without a simulator:
 
 ![Federation Studio on the super-app-showcase workspace: the Apps tab with four
 ready nodes and five consumption edges, the Compare tab with the shared-package
-matrix, and the Doctor tab with the findings table](docs/assets/federation-studio.gif)
+matrix, and the Doctor tab with the findings table](https://raw.githubusercontent.com/callstackincubator/repack-atlas/main/docs/assets/federation-studio.gif)
 
 _Federation Studio on a real Re.Pack workspace (host + 3 mini-apps), walking
 its three tabs: **Apps** (the graph, an inspector per app, and the findings
@@ -22,7 +22,8 @@ that mention the selected app), **Compare** (every shared package × every app,
 with the host as the reference column, so singleton drift is one glance away)
 and **Doctor** (the workspace-wide findings table, severity chips and per-code
 collapse; clicking a finding jumps back to the app it mentions). The
-walkthrough is in [`docs/demo-showcase.md`](docs/demo-showcase.md)._
+walkthrough is in
+[`docs/demo-showcase.md`](https://github.com/callstackincubator/repack-atlas/blob/main/docs/demo-showcase.md)._
 
 Atlas grew out of three stacked Re.Pack PRs
 ([#1463](https://github.com/callstack/repack/pull/1463),
@@ -220,11 +221,28 @@ Two optional `repack-federation.json` fields are easy to misread:
 
 ### Installing Atlas in a project
 
-No npm publish yet (PRD §13: git-only until the incubator decision):
+The published name is **`@callstack/repack-atlas`**, not published yet. Until the
+first release lands, build it from a clone — and do not install from a git URL:
+`dist/` is gitignored, so a git install gets sources only and the
+`repack-atlas` binary is missing.
 
 ```bash
-npm install github:<owner>/repack-atlas    # or the pnpm equivalent
+git clone https://github.com/callstackincubator/repack-atlas.git
+cd repack-atlas && pnpm install && pnpm build
+
+# In the project that should get the `repack-atlas` binary, point pnpm at this
+# clone (an absolute path; `pnpm link --global` is not valid on pnpm 11):
+pnpm link /absolute/path/to/repack-atlas
 ```
+
+Once it is on npm, this becomes `npm install @callstack/repack-atlas`; the
+binary stays `repack-atlas` either way.
+
+In the app you want to instrument, add the two Atlas plugins (see
+[`docs/demo-showcase.md`](https://github.com/callstackincubator/repack-atlas/blob/main/docs/demo-showcase.md));
+they resolve `@callstack/repack` from that app, not from Atlas.
+[`docs/decisions/npm-publish.md`](https://github.com/callstackincubator/repack-atlas/blob/main/docs/decisions/npm-publish.md)
+tracks the publish decision and the release runbook.
 
 ## Fixtures tour
 

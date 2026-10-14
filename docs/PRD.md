@@ -619,10 +619,18 @@ pattern); no `pull_request_target` with write tokens.
   *Atlas* build-system name; confirm before public launch).
 - **No npm publish until the incubator decision.** A scope rename later means a
   new package + deprecating the old one; the GitHub transfer itself is trivial.
-- During phases 1–2 consumers install from git (`npm i github:gedu/repack-atlas`
-  / `pnpm` equivalent). Versions via changesets from day 1 (release lines are
+  The publish decision, the runbook and the open questions now live in
+  [`docs/decisions/npm-publish.md`](decisions/npm-publish.md) — nothing is
+  published as of 2026-10-14.
+- ~~During phases 1–2 consumers install from git~~ **Invalidated 2026-10-14:**
+  installing from a git URL yields no runnable package (`files: ["dist"]` + a
+  gitignored `dist/`, verified with both npm and pnpm). Until the first publish,
+  consumers build from a clone; README documents that.
+- Versions via changesets from day 1 (release lines are
   cheap to have honest), `CHANGELOG.md` generated, first npm publish is a tagged
-  decision in phase 3.
+  decision in phase 3. Changesets are wired up as of 2026-10-14 but run **by
+  hand**: publishing is manual by owner decision, so there is no release
+  workflow, no npm token and no trusted-publisher connection.
 - License: MIT (already in repo); vendored files keep upstream MIT copyright
   headers and are inventoried in `VENDORED.md`.
 
