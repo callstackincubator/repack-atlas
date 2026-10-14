@@ -32,9 +32,9 @@ Re-ask whenever either is unanswered again:
 1. **The npm name.** Unscoped or `@callstack/…`, never `@callstackincubator/…`.
    If `package.json` still says `repack-atlas` and the maintainer has not named
    the package, stop and ask.
-2. **The version.** `0.x` unless the maintainer says the `repack-atlas/plugin`
-   and `repack-atlas/introspection` subpaths are stable; a breaking change to
-   either is a `major`.
+2. **The version.** `0.x` unless the maintainer says the
+   `@callstack/repack-atlas/plugin` and `@callstack/repack-atlas/introspection`
+   subpaths are stable; a breaking change to either is a `major`.
 
 A version can never be republished, even after unpublishing. If either answer
 is missing, do not run anything below; report the question.

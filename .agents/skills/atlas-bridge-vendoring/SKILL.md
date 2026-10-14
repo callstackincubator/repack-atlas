@@ -85,6 +85,7 @@ pnpm test
 
 Changing the forked code is a normal reviewed diff: keep the MIT header, and add
 an adjustment entry to `VENDORED.md` for every change to a vendored file.
-`repack-atlas/plugin` and `repack-atlas/introspection` are Atlas public API
+`@callstack/repack-atlas/plugin` and `@callstack/repack-atlas/introspection` are
+Atlas public API
 (semver applies once published), so treat changes to their options and output as
 API changes.

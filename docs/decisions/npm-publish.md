@@ -25,8 +25,8 @@ here for everything release-related.
 ## 2. Still open before the first publish
 
 **The first version: `0.1.0`** — owner decision, 2026-10-14. `0.x` on purpose:
-nobody has said the `repack-atlas/plugin` and `repack-atlas/introspection`
-subpaths are a stable contract yet — those are public API (PRD §8.2), and they
+nobody has said the `@callstack/repack-atlas/plugin` and
+`@callstack/repack-atlas/introspection` subpaths are a stable contract yet — those are public API (PRD §8.2), and they
 are also the reason this is not "just a CLI". The committed changeset is `minor`,
 so the first `changeset version` on `0.0.1` lands on `0.1.0`; `pnpm changeset
 status` reports exactly one minor bump for `@callstack/repack-atlas` and no other
@@ -47,13 +47,21 @@ package.
   `@callstack/repack-atlas` name is still proven only by the publish itself** —
   npm has no pre-flight call for it, and a rejected publish leaves nothing behind.
 
-**Sequencing found when the runbook was picked up.** The PR/commit links and the
-`Thanks [@user]!` credit in `CHANGELOG.md` require a changeset naming a **pushed**
-commit or PR (§3). This work is still uncommitted on
-`feat/npm-publish-readiness` (0 commits ahead of `origin/main`, the branch is not
-on `origin` at all), so `changeset version` run today can only emit a bullet with
-no links. Either land and push the commits first and put `pr: #<n>` in the
-changeset, or accept `author: @gedu` credit with no links.
+**Sequencing, now resolved and observed.** The PR/commit links and the
+`Thanks [@user]!` credit require a changeset naming a commit or PR that already
+exists on GitHub, so the work had to land first: it is pushed as
+`feat/npm-publish-readiness` and opened as **PR #79**. Replayed in a scratch clone
+against the real GitHub API with `GITHUB_TOKEN="$(gh auth token)"`:
+
+| changeset header | result |
+| --- | --- |
+| `commit: <pushed sha>` | `[#79](…/pull/79) [`ffbf781`](…/commit/ffbf781…) Thanks [@gedu]! - …` and `0.0.1 → 0.1.0` |
+| `pr: #79` | `[#79](…/pull/79) Thanks [@gedu]! - …` (PR link + credit, no commit link) |
+| `pr: #79` with **no** `GITHUB_TOKEN` | **refused**: "Please create a GitHub personal access token…", applied nothing, wrote no `CHANGELOG.md` |
+
+So a release PR references itself as `pr: #<n>` (the number is known once the PR
+is opened, before the version bump), and the runbook's "keep `GITHUB_TOKEN` set"
+is load-bearing, not decorative.
 
 **One consequence of the scope, in another repo:** `super-app-showcase` imports
 `repack-atlas/plugin` / `repack-atlas/introspection` in four `rspack.config.ts`
@@ -166,24 +174,64 @@ expires if it does not complete a first publish within 2 days, and since
 2026-09-03 new connections default to stage-only unless "Allow npm publish" is
 ticked.
 
-## 6. State of this repository right now
+## 6. State of this repository
 
-Prepared, local, uncommitted, on `feat/npm-publish-readiness`: manifest fixed and
-renamed to `@callstack/repack-atlas`, `check:publish` + `publish:preflight` with
-tests, changesets config and one changeset, the CI guard, the runbook, the skill
-and this document. Nothing published, nothing pushed, no npm-side change.
+Landed as **PR #79** (7 commits on `feat/npm-publish-readiness`, base
+`origin/main` = `83045ae`): manifest fixed and renamed to
+`@callstack/repack-atlas`, `check:publish` + `publish:preflight` with tests,
+changesets config and one changeset, the CI guard, the runbook, the skill and
+this document. **Nothing published**: no `pnpm publish`, no `npm login`, no tag,
+and `npm view @callstack/repack-atlas version` still answers 404.
 
-The preflight was run end to end and reported, on `0.0.1`:
+Latest observed preflight, on `0.0.1`, after the G2/G3/G6 fixes below:
 
 ```
 G1 manifest        PASS 247 packaged file(s)
-G2 install         PASS fresh project installed @callstack/repack-atlas
-G3 bin             PASS repack-atlas 0.0.1
+G2 install         PASS fresh project installed @callstack/repack-atlas@0.0.1
+G3 bin             PASS repack-atlas 0.0.1 via node_modules/.bin
 G4 public API      PASS plugin, introspection -> function
 G5 behavior        PASS drift fixture -> 1 + SHARED_VERSION_DRIFT; clean fixture -> 0
-G6 reproducibility PASS two packs identical (10efa20db8b7…)
+G6 reproducibility PASS two packs identical (d8ad6427ee13…)
 ```
 
-G6 is the one that makes the other five worth reading: it proves the bytes
-installed in G2-G5 are the bytes `pnpm pack` produces twice, i.e. the artifact
-probed is the artifact published.
+The hash is a property of the tree, so it moves whenever a file changes; read it
+as "which bytes were probed", never as a version. The block above was recorded
+from a run of this tree, so the commit that adds these lines already changes it —
+that is expected, and exactly why the release runbook re-runs the preflight on the
+release commit rather than trusting a quoted line. G6 is what makes the other five
+worth reading — it proves the bytes installed in G2-G5 are the bytes `pnpm pack`
+produces, i.e. the artifact probed is the artifact published.
+
+## 7. What an independent review of this change found
+
+A read-only verification pass over the branch found seven ways the guards could
+report a **vacuous OK**, plus one false claim of its own. All are fixed with a test
+each, and each is worth keeping in the record because every one of them looked
+correct:
+
+| Hole | How it passed | Now |
+| --- | --- | --- |
+| `stale-dist-guard-missing` accepted `prepack: "echo stale"` | only checked the field was a non-empty string | must mention `tsc` or `pnpm run build` |
+| `dead-link` vanished with the README | `readme === undefined` skipped the rule, and nothing required README/LICENSE to ship | `required-file-missing` for both |
+| `self-dependency` missed the unscoped name | matched `manifest.name` exactly, so the rename to `@callstack/…` disarmed the very rule written for the L11 incident | matches the base name too, scoped or not |
+| `repository-mismatch` vanished when git could not answer | `originUrl()` swallowed the failure into `undefined`, and the rule needed a reference | `.changeset/config.json` supplies the canonical repo, so a fork clone is neither falsely red nor silently unchecked |
+| G3 certified a broken bin | ran `node dist/cli.js`, which works even with no shebang; reproduced in a scratch clone where the user's `node_modules/.bin/repack-atlas` died with a syntax error while G3 said PASS | runs the installed bin, keeps `node dist/cli.js` only as diagnostic |
+| G2 printed a name it never read | `PASS` was built from a hardcoded constant | PASS requires the installed manifest's version to match the packed one |
+| G6 could compare one file twice | both packs wrote into one directory and the listing re-found the first tarball | each pack gets its own directory, and two tarballs in one is an error |
+
+Two honest limits left, both follow-ups rather than blockers:
+
+- **The gates prove `pnpm pack` bytes.** `npm pack` keeps `prepack` and
+  `packageManager`, which the packer strips, so its tarball is not byte-identical
+  (`5813aef9…` vs `10efa20d…` on the same tree). The runbook publishes with `pnpm
+  publish`; anyone typing `npm publish` uploads bytes no gate examined.
+- **The packed manifest is not what G1 reads.** G1 and `check:publish` validate the
+  working-tree `package.json`, so the `prepack` and `packageManager` fields they
+  require are asserted about a manifest that is not shipped. That is intended —
+  those fields exist to protect the build — but it means "G1 PASS" is a statement
+  about the source manifest, not the published one.
+
+Uninspected by any gate, and a packaging decision rather than a defect: the
+122 `.map` files are ~34% of the uncompressed artifact and reference `../../src/…`
+paths that do not ship, and the shipped manifest carries 11 `devDependencies` plus
+`scripts` pointing at files that do not ship.

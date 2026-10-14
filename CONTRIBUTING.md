@@ -23,7 +23,7 @@ risk R3). An approved issue means the design conversation already happened.
 # Node >= 22.13, pnpm >= 10 (exact version in package.json packageManager)
 pnpm install
 pnpm build     # tsc: src -> dist; the CLI and fixture tests run against dist/
-pnpm test      # 274 node:test tests over the fixture workspaces, seconds
+pnpm test      # ~966 node:test tests over the fixture workspaces, seconds
 ```
 
 ## Commits and PR size
@@ -97,10 +97,10 @@ checkout, observed 2026-09-30.
 | Lint | `pnpm lint` | silent, exit 0 |
 | Typecheck | `pnpm typecheck` | silent, exit 0 |
 | Build | `pnpm build` | silent, exit 0 (`src` -> `dist`) |
-| Test | `pnpm test` | `tests 948 / pass 948 / fail 0` (observed 2026-10-14) |
+| Test | `pnpm test` | `tests 966 / pass 966 / fail 0` (observed 2026-10-14) |
 | Agent files | `pnpm agent:check` | `agent-sync: OK ...`, exit 0 |
 | Vendored provenance | `pnpm check:vendored` | `vendored-check: OK - 6 vendored file(s) accounted for in VENDORED.md` |
-| Publish manifest | `pnpm check:publish` | `publish-check: OK - repack-atlas@<v> with 247 packaged file(s), 3 workflow(s) checked` |
+| Publish manifest | `pnpm check:publish` | `publish-check: OK - @callstack/repack-atlas@0.0.1 with 247 packaged file(s), 3 workflow(s) checked` |
 | Commit messages (PR gate) | `pnpm check:commits` | `commit-check: OK - N item(s) checked` |
 | Studio e2e | `pnpm test:e2e` | `7 passed`, needs `pnpm exec playwright install chromium` |
 
@@ -157,9 +157,9 @@ GitHub.
    This bumps `version`, writes `CHANGELOG.md`, and deletes the consumed
    changeset files. Keep `GITHUB_TOKEN` set: it is what turns a changelog line
    into `[#123] [`a1b2c3d`] Thanks [@author]! - …`. Without it the run either drops
-   the links (no commit referenced) or stops with "Please create a GitHub
-   personal access token" (a `commit:` line was referenced). See
-   `docs/decisions/npm-publish.md` §3 for the four observed behaviours.
+   the links (no reference in the changeset) or stops with "Please create a GitHub
+   personal access token" (a `commit:`/`pr:` line was referenced) and applies
+   nothing. See `docs/decisions/npm-publish.md` §3 for the observed behaviours.
 3. Review `CHANGELOG.md` and `package.json`, then commit:
    `chore(release): v<version>`.
 4. Prove the artifact before the registry ever sees it:
@@ -208,14 +208,19 @@ One file under `.changeset/<random-name>.md` per released change:
 
 ```markdown
 ---
-"repack-atlas": minor
+"@callstack/repack-atlas": minor
 ---
 
 add doctor --json output
 ```
 
+The package key must be the published name: a changeset naming the old
+unscoped `repack-atlas` makes `pnpm changeset status` fail with
+"is not in the workspace".
+
 `patch` for fixes, `minor` for features, `major` for breaking changes to
-`repack-atlas/plugin` or `repack-atlas/introspection` — those two subpaths are
+`@callstack/repack-atlas/plugin` or `@callstack/repack-atlas/introspection` —
+those two subpaths are
 public API (PRD §8.2). Optional header lines, each on its own line before the
 summary: `commit: <full-sha>` or `pr: #<n>` to get links and author credit from
 GitHub (needs `GITHUB_TOKEN`), or `author: @<user>` for credit alone with no

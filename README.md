@@ -196,7 +196,8 @@ the rest.
 
 Atlas reads `repack-federation.json` plus one federation manifest per app. To
 point it at a real project, add two plugins to each app's rspack config:
-`repack-atlas/plugin` (emits the manifest) and `repack-atlas/introspection`
+`@callstack/repack-atlas/plugin` (emits the manifest) and
+`@callstack/repack-atlas/introspection`
 (feeds `init` and the workspace config). Both are opt-in. Both subpaths are
 Atlas public API (semver applies once published), and Re.Pack / Module
 Federation compatibility is validated by Atlas, not upstream; see PRD §8.2.

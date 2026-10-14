@@ -231,8 +231,8 @@ Rules (lint-enforced):
    its MIT header (license obligation). Changes to the fork are ordinary
    reviewed diffs; record each one in `VENDORED.md` as an adjustment.
 4. **`index.ts` is the bridge's public surface.** It re-exports the forked
-   manifest plugin behind Atlas's own API (§8.2). `repack-atlas/plugin` and
-   `repack-atlas/introspection` are Atlas public API: semver applies once
+   manifest plugin behind Atlas's own API (§8.2). `@callstack/repack-atlas/plugin` and
+   `@callstack/repack-atlas/introspection` are Atlas public API: semver applies once
    published.
 
 ### 6.3 The wrapper rule
@@ -469,13 +469,14 @@ What Atlas now owns and validates itself:
 
 - the manifest **types + schema** as emitted by the plugin (aligned with the
   published MF2 manifest spec where it applies),
-- **config introspection** (`repack-atlas/introspection`), reading federation
+- **config introspection** (`@callstack/repack-atlas/introspection`), reading federation
   options from a user config without deep-importing Re.Pack internals,
 - **dev-server asset visibility** for the manifest filename (the `writeToDisk`
-  option of `repack-atlas/plugin`, `VENDORED.md` B1),
+  option of `@callstack/repack-atlas/plugin`, `VENDORED.md` B1),
 - compatibility with the Re.Pack and Module Federation versions users run.
 
-`repack-atlas/plugin` and `repack-atlas/introspection` are Atlas public API;
+`@callstack/repack-atlas/plugin` and `@callstack/repack-atlas/introspection` are
+Atlas public API;
 semver applies once the package is published. Trade-off accepted: Atlas carries
 ~a few thousand lines it would otherwise have borrowed, and tracks Re.Pack
 changes itself. Mitigations: `VENDORED.md` provenance, the lint fence, a small
