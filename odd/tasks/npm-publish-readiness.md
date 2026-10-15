@@ -362,3 +362,38 @@ at every commit, not just at the tip.
   (`attempt=2`) came back **success**, so the PR is green without this fix; the
   fix removes the race instead of relying on the rerun, because the gate that
   sometimes lies is the one guarding the publish artifact.
+- **L21** (native review of this slice: one real CRITICAL found and fixed; the
+  authority is left open, not closed). START created `review-e0b82cdef6d322b0`
+  at tier `high` (risk evidence: shell in `.github/workflows/ci.yml`) with three
+  lenses over 3460 frozen lines. All three reviewers and the refuter were
+  captured and admitted, which produced `correction_required` with one
+  corroborated finding: **`R3-snapshot-copy-race`** (reliability, CRITICAL,
+  causal `introduced`, `tests/cli/run-bin.ts:98`) — the snapshot copied the live
+  build output with no barrier, so it could freeze a half-rebuilt tree into the
+  very copy meant to be stable. **The finding is correct and it was mine**: L20
+  moved the readers off `repo/dist/` but left the copy itself racing `tsc`.
+  Fix, test-first: `copyVerified`/`copyMatches` in `tests/cli/run-bin.ts` compare
+  every file of both trees after the copy and redo it on a mismatch, answering
+  with an error after a bounded number of attempts rather than hanging. RED
+  observed (a naive copy kept the stale tree and did not notice), then four
+  tests pin it through that public API. Commit `70abbb1`, **163 diff lines**
+  inside the 200-line correction budget — reached by dropping a new module and
+  the churn it caused, not by cutting assertions.
+  Observed on the corrected tip: `typecheck` 0 · `lint` 0 · **`pnpm test`
+  973/973 on three of four full runs**. The fourth failed on
+  `tests/cli/dev-tui-wizard-app.test.tsx` › `repaints when the controller moves
+  and prints a settled recap` (rendered `''`). Provenance, checked before
+  blaming or absorbing it: the file is byte-identical to `origin/main`, imports
+  no `run-bin`, and passed 5/5 in isolation, so it is a pre-existing flake in
+  the ink TUI app, unrelated to this slice and distinct from #77.
+  **The review is NOT closed.** After the correction was committed, the target
+  identity rotated (`562f05d3…` → `86ecf035…`, the corrected tree), but bound
+  facade STATUS reoffered the correction-plan slot still carrying the previous
+  `--target=562f05d3…`; submitting it was rejected twice as
+  `capture-binding-rejected` ("one non-empty matching provider lineage and
+  target token"). I did not force a third attempt, reset, or fabricate a
+  verdict. The lineage remains at `correction_required`, nothing was
+  acknowledged, so this slice carries an **unclosed review**: the next route is
+  a fresh transaction over the corrected target, or maintainer inspection of
+  `review-e0b82cdef6d322b0`. Publishing is still gated by `publish:preflight`
+  and human decision, as before; nothing here was published.
