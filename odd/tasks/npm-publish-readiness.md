@@ -431,3 +431,35 @@ at every commit, not just at the tip.
   **The fix has never run in CI.** `origin/feat/npm-publish-readiness` is still
   `c9b90cc`; `117882c`, `70abbb1` and this commit are unpushed, and the green CI
   attempt was pre-fix. Local is macOS/Node 24, the gate is Linux/Node 22.
+- **L23** (the L22 flag is now closed, and the release is staged but not fired).
+  The five commits were pushed (`c9b90cc..8d38634`, fast-forward) after scanning
+  both the diff **and the commit messages** for internal references, and
+  **CI run `38735097907` on `8d38634` came back success on attempt 1**, including
+  `Lint, typecheck, build & test (Linux, Node 22)` → pass — the exact job whose
+  attempt 1 failed with the `DEFAULT_MANIFEST_FILENAME` race. So the fix is now
+  validated on the gate where the bug appeared, not only locally. Read from
+  `gh run view` / `gh pr checks`, not from the watch loop's word.
+  `pnpm publish:preflight` on the current tree: **all six gates PASS**
+  (G1 247 packaged files · G2 install · G3 bin `0.0.1` via `node_modules/.bin`
+  · G4 plugin+introspection are functions · G5 drift fixture → `1` +
+  `SHARED_VERSION_DRIFT`, clean → `0` · G6 two packs byte-identical
+  `d8ad6427ee13…`), exit 0.
+  The version bump was **rehearsed and reverted, deliberately not committed**.
+  `GITHUB_TOKEN=$(gh auth token) pnpm changeset version` produced `0.0.1 →
+  **0.1.0**` — the version decided in L15, with no edits — and a CHANGELOG line
+  carrying the PR link and `Thanks [@gedu]` credit, consuming
+  `publish-ready-packaging.md`. Then `git checkout -- package.json .changeset/`
+  and removed `CHANGELOG.md`, leaving the tree clean. Reason: the runbook works
+  on a clean `main` and the release PR is a separate PR; a version bump inside
+  #79 would put a release commit behind an open feature review, and the credit
+  link would point at a PR that is not merged yet. So the bump belongs after #79
+  merges, not before.
+  Changed since L22, worth knowing: **`npm whoami` now returns `E401`**. The
+  login recorded in L15 has expired, so `npm login` is a precondition again.
+  That does not block anything above (`preflight` never contacts the registry);
+  it is a step for whoever runs the publish.
+  Remaining, in order: merge #79 → on `main`, `changeset version` (expect
+  `0.1.0`) and commit the release PR → `pnpm publish:preflight` → `pnpm publish`
+  (needs `npm login` + a fresh OTP, so it is a human terminal action) → then
+  `npm view @callstack/repack-atlas version` must print `0.1.0`, and only then
+  `git tag v0.1.0 && git push --tags`.
