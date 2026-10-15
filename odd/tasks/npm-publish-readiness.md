@@ -321,3 +321,44 @@ at every commit, not just at the tip.
   I did not force a third attempt or fabricate a verdict, and nothing was
   acknowledged. The independent verifier above is the risk-gated verification the
   ASSESS plan required, and it is what produced L18.
+- **L20** (a second CI flake, found by a failed run rather than by a rerun).
+  CI run `38625045137` failed one test of 966:
+  `tests/runner/dev-runner.test.ts` › `--port 0x50 is rejected with exit 2`,
+  with `SyntaxError: The requested module '../repack-bridge/index.js' does not
+  provide an export named 'DEFAULT_MANIFEST_FILENAME'` and `1 !== 2`. Not a
+  behaviour bug: the file's six neighbours (`ok 1`…`ok 6`) and the other ten
+  suites were green in the same run, and the tip is green locally.
+  Mechanism, read from the scripts rather than guessed: `node:test` runs test
+  files in concurrent processes; `tests/scripts/publish-check.test.ts` runs
+  `scripts/publish-check.mjs`, whose `pnpm pack` fires `prepack` → `tsc`, which
+  rewrites `dist/` file by file (`outDir: dist`, no `incremental`) while
+  `dev-runner.test.ts` is spawning `node dist/cli.js` from that same tree. The
+  spawn linked against a half-written `dist/repack-bridge/index.js`, died at
+  link time with exit 1, and the test read 1 where it asserted 2. This
+  repo-root pack entered the PR at `3df1c50`, so the PR introduced the writer.
+  **Distinct from #77** (the `waitFor` 12-minute hang): different file, signal,
+  and cause.
+  Not reproduced locally: 6 runs of the three implicated files with the same
+  concurrency (`notok=0` each), and a direct probe that packed over 25 live
+  spawns kept exit 2. The race is real in CI (faster writes, tighter schedule),
+  low-rate on this machine. I did not claim a local reproduction; instead the
+  fix pins the *signature* — a copy of `dist/` with one module replaced exits 1
+  naming the missing export — so the failure mode is now proven on demand.
+  Fix (test-first, RED observed as an assertion, not an import error):
+  `tests/cli/run-bin.ts` keeps `repoBinPath` for the real build and repoints
+  `binPath` — an ESM live binding — at a per-process `mkdtemp` snapshot (`dist/`
+  + root `package.json`, which `dist/cli/version.js` reads via `../../package.json`,
+  + a `node_modules` symlink so `ink`/`react`/`@clack/prompts` resolve by walking
+  up), removed on exit. `dev-runner.test.ts`'s `before()` now **awaits**
+  `ensureBin()`; it had called it un-awaited, which was harmless while the
+  function only stat'd a path, but would have raced the repoint. The publish
+  guard still packs the real repo — only the readers moved, so `check:publish`
+  keeps its teeth. `tests/cli/bin-snapshot.test.ts` (3 tests) pins all of it.
+  Observed after: `typecheck` 0 · `lint` 0 · **`pnpm test` 969 pass / 0 fail**
+  (966 before, +3 from the new file) ·
+  `doctor.test.ts` 41/41 in isolation (it passes `binPath` as a `--workspace`
+  that must have no config above it — still true in `$TMPDIR`) · no
+  `atlas-bin-snapshot-*` left in `$TMPDIR`. The CI rerun of the same head
+  (`attempt=2`) came back **success**, so the PR is green without this fix; the
+  fix removes the race instead of relying on the rerun, because the gate that
+  sometimes lies is the one guarding the publish artifact.
