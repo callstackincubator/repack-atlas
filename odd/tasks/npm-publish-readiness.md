@@ -504,3 +504,41 @@ at every commit, not just at the tip.
   `npm audit` findings, all arriving through the `@callstack/repack` peer tree
   (`metro`, `http-proxy-middleware`, `image-size`, `react-native`); Atlas's own
   three runtime deps (`ink`, `react`, `@clack/prompts`) are not among them.
+
+- **L25** (the publish left the install docs lying, and the owner caught it).
+  Reported L24 as complete while `README.md` still read "The published name is
+  `@callstack/repack-atlas`, **not published yet**. Until the first release
+  lands, build it from a clone" — the pre-release instruction, still the first
+  thing a newcomer hits. Asked and answered: a publish makes **every install
+  instruction a changed surface**; grepping the docs for the state just changed
+  (`first release`, `not published`, `on npm`, `404`) belongs in the release
+  runbook, not in someone's memory.
+  Fixed as `28905b0 docs: make npm install the recommended way to get Atlas`
+  (140 lines, 5 files): README gained an `## Install` section
+  (`npm install -D @callstack/repack-atlas`, `npx repack-atlas`) with the clone
+  path renamed `## Quickstart (from a clone)`; `### Installing Atlas in a
+  project` now treats `pnpm link` as the unreleased-commit escape hatch only;
+  `CONTRIBUTING.md` dropped "Before the first release only" and records the
+  `publish-branch` gotcha; `docs/decisions/npm-publish.md` is `Status:
+  published` with the real §6 numbers; `docs/PRD.md` §13 struck the "no npm
+  publish" line; and the `atlas-npm-publish` skill lost its "a 404 is the good
+  answer" precondition, gaining a *Prove it landed* section — because after
+  L24 that advice would have had the next release re-publishing a burned
+  version.
+  Measured, not assumed: on a project that already had `@callstack/repack`
+  5.4.2, `npm install -D @callstack/repack-atlas` then `npx repack-atlas
+  --version` → `repack-atlas 0.1.0`, no duplicate Re.Pack in the tree, and the
+  **installed** binary answered `doctor --workspace fixtures/fixture-version-drift`
+  → exit 1 + `SHARED_VERSION_DRIFT`, clean fixture → exit 0. Gates: `agent:check`
+  (a SKILL.md body changed), `typecheck`, `lint`, `test` 974/974, `check:commits`,
+  and `check:publish` — the one that matters here, since it reads the README
+  **as packed** through the `dead-link` rule.
+  Two facts worth keeping: the tarball ships `dist/` only (**0** `fixtures/`
+  entries), so the demo commands cannot work for an npm-installed user — the
+  clone path stays documented rather than deleted. And **npm renders the README
+  from the published tarball**, so the npm page still showed "not published
+  yet" while GitHub did not.
+  Owner decision, verbatim intent: push both commits straight to `main` (no
+  branch protection; the release commit landed the same way), and **do not burn
+  `0.1.1`** for the npm page — refresh it with the next real release. So the
+  npm page is knowingly stale until then.
