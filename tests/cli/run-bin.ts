@@ -21,6 +21,8 @@ import {
   mkdir,
   mkdtemp,
   readdir,
+  readFile,
+  rm,
   stat,
   symlink,
 } from 'node:fs/promises';
@@ -95,7 +97,7 @@ let snapshotRoot: Promise<string> | undefined;
  */
 async function buildSnapshot(): Promise<string> {
   const root = await mkdtemp(path.join(tmpdir(), 'atlas-bin-snapshot-'));
-  await copyTree(path.join(repoRoot, 'dist'), path.join(root, 'dist'));
+  await copyVerified(path.join(repoRoot, 'dist'), path.join(root, 'dist'));
   await copyFile(
     path.join(repoRoot, 'package.json'),
     path.join(root, 'package.json')
@@ -142,4 +144,60 @@ export async function copyTree(
     if (entry.isDirectory()) await copyTree(from, to);
     else await copyFile(from, to);
   }
+}
+
+async function listed(dir: string, prefix = ''): Promise<string[]> {
+  const found: string[] = [];
+  for (const entry of await readdir(dir, { withFileTypes: true })) {
+    const relative = prefix === '' ? entry.name : `${prefix}/${entry.name}`;
+    if (entry.isDirectory()) {
+      found.push(...(await listed(path.join(dir, entry.name), relative)));
+    } else found.push(relative);
+  }
+  return found;
+}
+
+const readOrNull = (file: string): Promise<Buffer | null> =>
+  readFile(file).catch(() => null);
+
+/** Files where `copy` differs from, is missing against, or adds to `source`. */
+export async function copyMatches(source: string, copy: string): Promise<string[]> {
+  const all = new Set([...(await listed(source)), ...(await listed(copy))]);
+  const drifted: string[] = [];
+  for (const file of all) {
+    const [a, b] = await Promise.all([
+      readOrNull(path.join(source, file)),
+      readOrNull(path.join(copy, file)),
+    ]);
+    if (a === null || b === null || !a.equals(b)) drifted.push(file);
+  }
+  return drifted.sort();
+}
+
+/**
+ * `copyTree`, then prove the two trees match: the source is live `tsc` output,
+ * so an unchecked copy can freeze a half-rebuilt tree. A mismatch redoes the
+ * whole copy; a source that never settles answers with an error. `onCopied` is a
+ * test seam for a rewrite landing between the copy and its check.
+ */
+export async function copyVerified(
+  source: string,
+  copy: string,
+  onCopied?: () => Promise<void>,
+  attempts = 30
+): Promise<void> {
+  let drift = 'unknown';
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    await rm(copy, { recursive: true, force: true });
+    await copyTree(source, copy);
+    await onCopied?.();
+    const changed = await copyMatches(source, copy);
+    if (changed.length === 0) return;
+    drift = changed.join(', ');
+    await new Promise((r) => setTimeout(r, Math.min(500, 100 * attempt)));
+  }
+  throw new Error(
+    `snapshot copy never settled after ${attempts} attempts (last drift: ${drift}) — ` +
+      'is scripts/publish-check.mjs rebuilding dist/ concurrently?'
+  );
 }

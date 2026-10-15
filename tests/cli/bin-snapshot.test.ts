@@ -21,13 +21,22 @@
 
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 import { test } from 'node:test';
 
-import { binPath, copyTree, ensureBin, repoBinPath, repoRoot, runBin } from './run-bin.js';
+import {
+  binPath,
+  copyMatches,
+  copyTree,
+  copyVerified,
+  ensureBin,
+  repoBinPath,
+  repoRoot,
+  runBin,
+} from './run-bin.js';
 
 const exec = promisify(execFile);
 
@@ -109,4 +118,94 @@ test('the snapshot bin is self-sufficient and answers argv like the real one', a
   const rejected = await runBin('dev', '--dry-run', '--port', '0x50');
   assert.equal(rejected.code, 2, rejected.stderr);
   assert.match(rejected.stderr, /--port must be a TCP port number \(1-65535\)/);
+});
+
+// The copy that builds the snapshot reads the same live tree, so it needs a
+// barrier of its own. Review finding R3-snapshot-copy-race (reliability,
+// CRITICAL, `introduced`): moving the readers off `repo/dist/` left the copy
+// itself racing `tsc` — an unchecked copy can freeze a half-rebuilt tree.
+
+/** Write a file, creating its parents, so a test can build a tree. */
+async function put(file: string, text: string): Promise<void> {
+  await mkdir(path.dirname(file), { recursive: true });
+  await writeFile(file, text);
+}
+
+test('a copy that matches its source verifies clean', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'atlas-snapshot-'));
+  try {
+    const source = path.join(dir, 'src');
+    await put(path.join(source, 'a.js'), 'export const a = 1;\n');
+    await put(path.join(source, 'sub/b.js'), 'export const b = 1;\n');
+    await copyVerified(source, path.join(dir, 'copy'));
+
+    assert.deepEqual(await copyMatches(source, path.join(dir, 'copy')), []);
+    assert.equal(
+      await readFile(path.join(dir, 'copy', 'sub', 'b.js'), 'utf8'),
+      'export const b = 1;\n'
+    );
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('a stale or partial copy is drift, never a silent pass', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'atlas-snapshot-'));
+  try {
+    // The finding's shape: `bridge.js` read before `tsc` rewrote it, `late.js` missed.
+    await put(path.join(dir, 'src/cli.js'), 'import "./bridge.js";\n');
+    await put(path.join(dir, 'src/bridge.js'), 'export const e = 2;\n');
+    await put(path.join(dir, 'src/late.js'), 'export const l = 1;\n');
+    await put(path.join(dir, 'copy/cli.js'), 'import "./bridge.js";\n');
+    await put(path.join(dir, 'copy/bridge.js'), 'export const e = 1;\n');
+
+    assert.deepEqual(
+      await copyMatches(path.join(dir, 'src'), path.join(dir, 'copy')),
+      ['bridge.js', 'late.js']
+    );
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('a rewrite mid-copy is redone, not frozen into the snapshot', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'atlas-snapshot-'));
+  try {
+    const source = path.join(dir, 'dist');
+    await put(path.join(source, 'cli.js'), 'export const v = 1;\n');
+    await put(path.join(source, 'sub/leaf.js'), 'export const l = 1;\n');
+
+    let rewrites = 0;
+    await copyVerified(source, path.join(dir, 'copy'), async () => {
+      rewrites += 1;
+      await writeFile(path.join(source, 'sub/leaf.js'), 'export const l = 2;\n');
+    });
+
+    assert.ok(rewrites > 1, `the drifted copy was redone (${rewrites} passes)`);
+    assert.equal(
+      await readFile(path.join(dir, 'copy', 'sub', 'leaf.js'), 'utf8'),
+      'export const l = 2;\n'
+    );
+    assert.deepEqual(await copyMatches(source, path.join(dir, 'copy')), []);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('a source that never settles answers instead of hanging the suite', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'atlas-snapshot-'));
+  try {
+    await put(path.join(dir, 'src/a.js'), 'export const a = 0;\n');
+    let pass = 0;
+    await assert.rejects(
+      () =>
+        copyVerified(path.join(dir, 'src'), path.join(dir, 'copy'), async () => {
+          pass += 1;
+          await writeFile(path.join(dir, 'src/a.js'), `export const a = ${pass};\n`);
+        }, 2),
+      /snapshot copy never settled after 2 attempts/
+    );
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 });
