@@ -8,3 +8,6 @@ coverage/
 /blob-report/
 /playwright.cache/
 .atl/
+
+# Packed artifacts from `pnpm pack` / the publish probe. Never commit them.
+*.tgz

@@ -77,12 +77,17 @@ pnpm agent:sync  # regenerate skill symlinks + AGENTS.md tables
 pnpm agent:check # CI-mode verification of the above (exit 1 on drift)
 pnpm check:vendored # CI: every vendored file in VENDORED.md with a commit
                  # sha + Copyright header (exit 1 on drift)
+pnpm check:publish # CI: the publish manifest is honest (every entry point
+                 # ships in the real tarball; no stale-dist publish)
+pnpm publish:preflight # before a publish: 6 gates on the installed tarball
+                 # (install, bin, public API, doctor behavior, reproducible pack)
 pnpm check:commits # CI: Conventional Commits + no AI attribution on
                  # origin/main..HEAD (or --range <base>..<head>, --message)
 ```
 
 CI (`.github/workflows/ci.yml`) is light: lint, typecheck, build, test,
-`agent:check` and `check:vendored` in one Linux / Node 22 job per PR. The full
+`agent:check`, `check:vendored` and `check:publish` in one Linux / Node 22 job
+per PR. The full
 matrix (macOS + Linux × Node 22/24) and the Playwright studio-e2e job live in
 `ci-full.yml` and run only when a maintainer adds the `ready-to-merge` label
 (or via `workflow_dispatch`). The PR gates live in `pr-checks.yml`: PR title,
@@ -144,6 +149,7 @@ Direction of dependency: adapters → ports in core. Core never imports outward.
 | `atlas-bridge-vendoring` | Trigger: touching src/repack-bridge/, src/repack-bridge/vendored/, or VENDORED.md; copying code out of Re.Pack; a bridge import fails with ERR_PACKAGE_PATH_NOT_EXPORTED. | `.agents/skills/atlas-bridge-vendoring/SKILL.md` |
 | `atlas-dev-setup` | Trigger: set up, install, build, run, test, or debug this repo locally; "it does not build"; fresh clone; CI failing on a check you cannot reproduce locally. | `.agents/skills/atlas-dev-setup/SKILL.md` |
 | `atlas-doctor-finding` | Trigger: adding or changing a doctor check or finding, a finding code such as REMOTE_CYCLE or SHARED_VERSION_DRIFT, the doctor --json output shape, or a finding that has no fixture yet. | `.agents/skills/atlas-doctor-finding/SKILL.md` |
+| `atlas-npm-publish` | Trigger: publishing to npm, "voy a publicar esto a npm", releasing a version, bumping the package version, writing CHANGELOG.md, a changeset question, or anything that would run `pnpm publish` or `changeset version`. | `.agents/skills/atlas-npm-publish/SKILL.md` |
 | `atlas-runner` | Trigger: touching repack-atlas dev, src/runner/, src/cli/dev.ts, src/cli/dev-wizard.ts, the prompt adapters, a dev flag, or a dev --json event. | `.agents/skills/atlas-runner/SKILL.md` |
 
 <!-- END auto-generated skills table -->
@@ -175,6 +181,10 @@ before writing code.
 | adding a new doctor finding code | `atlas-doctor-finding` |
 | changing an existing doctor rule or its severity | `atlas-doctor-finding` |
 | changing the doctor --json report shape | `atlas-doctor-finding` |
+| publishing repack-atlas to npm or preparing a release | `atlas-npm-publish` |
+| running changeset version or bumping package.json version | `atlas-npm-publish` |
+| editing .changeset/ or CHANGELOG.md | `atlas-npm-publish` |
+| changing package.json entry points, files, or publishConfig | `atlas-npm-publish` |
 | changing the dev runner, its flags or its --json events | `atlas-runner` |
 | changing the dev wizard or the prompt adapters | `atlas-runner` |
 

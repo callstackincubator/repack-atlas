@@ -1,7 +1,9 @@
-# Single-package project. The repo root package is part of the workspace
-# implicitly; fixture workspaces (created in a later task) are listed here so
+# Single-package project. The root is listed explicitly (".") because the
+# changesets tooling resolves release targets through the workspace and refuses
+# a changeset for a package it does not find there; `fixtures/*` are listed so
 # they can be installed and tested together with the tool.
 packages:
+  - "."
   - "fixtures/*"
 
 # tsx needs the esbuild native binary (pnpm >= 11 blocks build scripts by default).

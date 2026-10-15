@@ -36,9 +36,9 @@ Two checkouts side by side:
      (commit `feat(deps): add repack-atlas as local file dependency`);
    - each app's `rspack.config.ts` adds two plugins next to
      `ModuleFederationPluginV2`:
-     `FederationManifestPlugin` from `repack-atlas/plugin` with
+     `FederationManifestPlugin` from `@callstack/repack-atlas/plugin` with
      `{ manifest: true, writeToDisk: true, ...same shared/remotes/exposes }`
-     and `IntrospectionPlugin` from `repack-atlas/introspection`. Both
+     and `IntrospectionPlugin` from `@callstack/repack-atlas/introspection`. Both
      plugins receive the very same `shared` object as
      `ModuleFederationPluginV2` (the Module Federation map), so there is no
      second hand-written copy:

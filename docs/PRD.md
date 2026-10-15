@@ -231,8 +231,8 @@ Rules (lint-enforced):
    its MIT header (license obligation). Changes to the fork are ordinary
    reviewed diffs; record each one in `VENDORED.md` as an adjustment.
 4. **`index.ts` is the bridge's public surface.** It re-exports the forked
-   manifest plugin behind Atlas's own API (§8.2). `repack-atlas/plugin` and
-   `repack-atlas/introspection` are Atlas public API: semver applies once
+   manifest plugin behind Atlas's own API (§8.2). `@callstack/repack-atlas/plugin` and
+   `@callstack/repack-atlas/introspection` are Atlas public API: semver applies once
    published.
 
 ### 6.3 The wrapper rule
@@ -469,13 +469,14 @@ What Atlas now owns and validates itself:
 
 - the manifest **types + schema** as emitted by the plugin (aligned with the
   published MF2 manifest spec where it applies),
-- **config introspection** (`repack-atlas/introspection`), reading federation
+- **config introspection** (`@callstack/repack-atlas/introspection`), reading federation
   options from a user config without deep-importing Re.Pack internals,
 - **dev-server asset visibility** for the manifest filename (the `writeToDisk`
-  option of `repack-atlas/plugin`, `VENDORED.md` B1),
+  option of `@callstack/repack-atlas/plugin`, `VENDORED.md` B1),
 - compatibility with the Re.Pack and Module Federation versions users run.
 
-`repack-atlas/plugin` and `repack-atlas/introspection` are Atlas public API;
+`@callstack/repack-atlas/plugin` and `@callstack/repack-atlas/introspection` are
+Atlas public API;
 semver applies once the package is published. Trade-off accepted: Atlas carries
 ~a few thousand lines it would otherwise have borrowed, and tracks Re.Pack
 changes itself. Mitigations: `VENDORED.md` provenance, the lint fence, a small
@@ -619,10 +620,18 @@ pattern); no `pull_request_target` with write tokens.
   *Atlas* build-system name; confirm before public launch).
 - **No npm publish until the incubator decision.** A scope rename later means a
   new package + deprecating the old one; the GitHub transfer itself is trivial.
-- During phases 1–2 consumers install from git (`npm i github:gedu/repack-atlas`
-  / `pnpm` equivalent). Versions via changesets from day 1 (release lines are
+  The publish decision, the runbook and the open questions now live in
+  [`docs/decisions/npm-publish.md`](decisions/npm-publish.md) — nothing is
+  published as of 2026-10-14.
+- ~~During phases 1–2 consumers install from git~~ **Invalidated 2026-10-14:**
+  installing from a git URL yields no runnable package (`files: ["dist"]` + a
+  gitignored `dist/`, verified with both npm and pnpm). Until the first publish,
+  consumers build from a clone; README documents that.
+- Versions via changesets from day 1 (release lines are
   cheap to have honest), `CHANGELOG.md` generated, first npm publish is a tagged
-  decision in phase 3.
+  decision in phase 3. Changesets are wired up as of 2026-10-14 but run **by
+  hand**: publishing is manual by owner decision, so there is no release
+  workflow, no npm token and no trusted-publisher connection.
 - License: MIT (already in repo); vendored files keep upstream MIT copyright
   headers and are inventoried in `VENDORED.md`.
 

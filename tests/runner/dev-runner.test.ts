@@ -325,7 +325,10 @@ async function waitPortFree(port: number, timeoutMs = 5_000): Promise<void> {
 }
 
 before(async () => {
-  ensureBin();
+  // Must be awaited: ensureBin() repoints binPath at the snapshot, and the
+  // port setup below is slower than the copy, so an un-awaited call would let
+  // the first spawn run before the repoint landed.
+  await ensureBin();
   // Three distinct free ports at once (sequential freePort() calls may repeat).
   const held = await occupyPorts(3);
   [WORKSPACE_HOST_PORT, REMOTE_AUTH_PORT, REMOTE_STORE_PORT] = held.ports as [
