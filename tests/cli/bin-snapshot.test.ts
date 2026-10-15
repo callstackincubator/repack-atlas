@@ -21,7 +21,7 @@
 
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
@@ -29,6 +29,7 @@ import { test } from 'node:test';
 
 import {
   binPath,
+  buildSnapshot,
   copyMatches,
   copyTree,
   copyVerified,
@@ -205,6 +206,45 @@ test('a source that never settles answers instead of hanging the suite', async (
         }, 2),
       /snapshot copy never settled after 2 attempts/
     );
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('buildSnapshot routes the build copy through that barrier', async () => {
+  // The four tests above call copyVerified directly, so none of them would fail
+  // if buildSnapshot quietly went back to a bare copyTree — the CI failure would
+  // be one refactor away. This one drives buildSnapshot itself, on a fake
+  // project root, so the wiring is what is under test.
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'atlas-snapshot-'));
+  try {
+    const project = path.join(dir, 'project');
+    await put(path.join(project, 'dist/cli.js'), 'export const v = 1;\n');
+    await put(path.join(project, 'package.json'), '{"version":"9.9.9"}\n');
+    await put(path.join(project, 'node_modules/sentinel'), 'deps\n');
+
+    let rewrites = 0;
+    const snapshot = await buildSnapshot(project, async () => {
+      rewrites += 1;
+      await writeFile(path.join(project, 'dist/cli.js'), 'export const v = 2;\n');
+    }, 3);
+
+    assert.ok(rewrites > 1, `a verified mismatch was redone (${rewrites} passes)`);
+    assert.equal(
+      await readFile(path.join(snapshot, 'dist', 'cli.js'), 'utf8'),
+      'export const v = 2;\n'
+    );
+    assert.deepEqual(
+      await copyMatches(path.join(project, 'dist'), path.join(snapshot, 'dist')),
+      []
+    );
+
+    // The two extras that make the copy runnable outside the repo.
+    const manifest = JSON.parse(
+      await readFile(path.join(snapshot, 'package.json'), 'utf8')
+    ) as { version: string };
+    assert.equal(manifest.version, '9.9.9');
+    assert.ok((await lstat(path.join(snapshot, 'node_modules'))).isSymbolicLink());
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

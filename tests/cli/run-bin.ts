@@ -94,15 +94,30 @@ let snapshotRoot: Promise<string> | undefined;
  * - the root `package.json`, because `dist/cli/version.js` reads `../../package.json`;
  * - a `node_modules` link, so bare imports (`ink`, `react`, `@clack/prompts`)
  *   resolve by walking up from the snapshot rather than by luck of location.
+ *
+ * `sourceRoot`/`onCopied`/`attempts` are the test seam that pins this function
+ * to the verified copy: dropping them would let a bare `copyTree` pass the suite.
  */
-async function buildSnapshot(): Promise<string> {
+export async function buildSnapshot(
+  sourceRoot = repoRoot,
+  onCopied?: () => Promise<void>,
+  attempts?: number
+): Promise<string> {
   const root = await mkdtemp(path.join(tmpdir(), 'atlas-bin-snapshot-'));
-  await copyVerified(path.join(repoRoot, 'dist'), path.join(root, 'dist'));
+  await copyVerified(
+    path.join(sourceRoot, 'dist'),
+    path.join(root, 'dist'),
+    onCopied,
+    attempts
+  );
   await copyFile(
-    path.join(repoRoot, 'package.json'),
+    path.join(sourceRoot, 'package.json'),
     path.join(root, 'package.json')
   );
-  await symlink(path.join(repoRoot, 'node_modules'), path.join(root, 'node_modules'));
+  await symlink(
+    path.join(sourceRoot, 'node_modules'),
+    path.join(root, 'node_modules')
+  );
   process.on('exit', () => {
     rmSync(root, { recursive: true, force: true });
   });
