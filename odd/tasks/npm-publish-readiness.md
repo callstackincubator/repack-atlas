@@ -397,3 +397,37 @@ at every commit, not just at the tip.
   a fresh transaction over the corrected target, or maintainer inspection of
   `review-e0b82cdef6d322b0`. Publishing is still gated by `publish:preflight`
   and human decision, as before; nothing here was published.
+- **L22** (independent verification of L20 + L21, and the vacuous-wiring gap it
+  found in my own fix). The verifier confirmed claim by claim, reading the real
+  CI log rather than my commit message: attempt 1 of run `38625045137` did fail
+  `--port 0x50 is rejected with exit 2` with the `DEFAULT_MANIFEST_FILENAME`
+  `SyntaxError` and `expected: 2 actual: 1` (966 tests, 1 fail); the mechanism
+  is `packOnce()` running `pnpm pack` with `cwd: REPO_ROOT`
+  (`scripts/publish-check.mjs:386-390`) from inside the suite
+  (`tests/scripts/publish-check.test.ts:231-234`). It also confirmed the publish
+  guard was **not** weakened: `git diff 117882c~1..70abbb1 -- scripts/
+  tests/scripts/` is empty.
+  Then it ran a **mutation probe** and found a real hole I had missed: the four
+  barrier tests called `copyVerified` directly, so **reverting `buildSnapshot`
+  to a bare `copyTree` kept all 973 tests green** — the exact class of guard that
+  cannot fail which L18 was about. The barrier was correct and unpinned from the
+  one call site that runs in production.
+  Fixed test-first: `buildSnapshot` is exported with `sourceRoot`/`onCopied`/
+  `attempts` as a seam, and `buildSnapshot routes the build copy through that
+  barrier` drives it on a fake project root (asserting the redo, the settled
+  content, an empty drift report, the copied `package.json`, and the
+  `node_modules` symlink). RED observed by re-applying the verifier's mutation:
+  `a verified mismatch was redone (0 passes)` while the other seven passed.
+  Observed after: `typecheck` 0 · `lint` 0 · focused 8/8 · **`pnpm test`
+  974/974** · no `atlas-bin-snapshot-*` left behind.
+  Accepted residual risk, stated rather than papered over: the root
+  `package.json` copy and the `node_modules` symlink sit outside the verified
+  region, but nothing in `pnpm test` rewrites either (the only root-manifest
+  writers are inside tmp fixtures; no install runs in-suite), and a stale one
+  would fail loudly in `--version`, not silently. `tools/studio-preview.mjs:58`
+  still imports the live `dist/`, which is safe only because the Playwright job
+  never packs — if `check:publish` or `publish:preflight` ever joins that job,
+  it needs the same treatment.
+  **The fix has never run in CI.** `origin/feat/npm-publish-readiness` is still
+  `c9b90cc`; `117882c`, `70abbb1` and this commit are unpushed, and the green CI
+  attempt was pre-fix. Local is macOS/Node 24, the gate is Linux/Node 22.
