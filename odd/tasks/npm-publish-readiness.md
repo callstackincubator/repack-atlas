@@ -463,3 +463,44 @@ at every commit, not just at the tip.
   (needs `npm login` + a fresh OTP, so it is a human terminal action) → then
   `npm view @callstack/repack-atlas version` must print `0.1.0`, and only then
   `git tag v0.1.0 && git push --tags`.
+
+- **L24** (the release fired: `@callstack/repack-atlas@0.1.0` is on npm). #79
+  merged as `b02ad27` (2026-10-15T13:20:58Z); `CI run 38741939966` on that
+  `main` tip = success, read job-level (`Lint, typecheck, build & test (Linux,
+  Node 22)`).
+  On a clean `main` in a dedicated worktree, the runbook ran as written.
+  `GITHUB_TOKEN=$(gh auth token) pnpm changeset version` → `0.0.1 → 0.1.0`, the
+  L15 version with no edits, and the CHANGELOG line carried the #79 link, the
+  `b02ad27` link and `Thanks [@gedu]`; `publish-ready-packaging.md` was
+  consumed. `CHANGELOG.md` was generated, never hand-edited. Committed as
+  `2ca6983 chore(release): v0.1.0` (`pnpm check:commits` OK, 1 item).
+  `pnpm publish:preflight` against that tree: **all six gates PASS**, exit 0
+  (G1 247 packaged files · G2 install `0.1.0` · G3 bin `repack-atlas 0.1.0` ·
+  G4 plugin + introspection are functions · G5 drift fixture → `1` +
+  `SHARED_VERSION_DRIFT`, clean → `0` · G6 two packs byte-identical
+  `fc7b2644933e…`).
+  The publish itself stayed a human terminal action (`npm login` + fresh OTP).
+  Verified rather than assumed: the **published tarball's sha256
+  `fc7b2644933ea8c656…` equals the local `pnpm pack` and the G6 hash** — the
+  bytes users install are the bytes the gates tested. `dist-tags.latest =
+  0.1.0`; a fresh `npm install @callstack/repack-atlas@0.1.0` in a throwaway
+  project prints `repack-atlas 0.1.0` from `node_modules/.bin`. Tag `v0.1.0`
+  and `main` pushed only after that. `CI run 38744541770` on `2ca6983` =
+  success (Linux/Node 22), plus both CodeQL analyze jobs.
+  Two gotchas for the next release, both earned here:
+  (1) **`pnpm publish` refuses to run from a branch that is not `main`** —
+  `publish-branch` defaults to `master|main` and this repo has no `.npmrc`, so a
+  `chore/release-v*` branch stops on an interactive prompt. Do the bump on local
+  `main` fast-forwarded over `origin/main` instead of answering through the
+  guard or overriding it.
+  (2) **After a first publish, the registry packument can keep answering `404`
+  for ~10 minutes** while `…/-/repack-atlas-0.1.0` and the version URL already
+  answer 200 — CDN negative caching. The runbook's tagging gate, `npm view
+  <name> version`, was the lagging signal. The printed `✅ Published package …`
+  line is not proof either. Prove a publish with the version URL / `dist-tags`
+  / a real install, and never re-publish a version because a stale `404` said
+  it was missing — a version number is burned for good.
+  Known and not caused here: that fresh install reports 13 high-severity
+  `npm audit` findings, all arriving through the `@callstack/repack` peer tree
+  (`metro`, `http-proxy-middleware`, `image-size`, `react-native`); Atlas's own
+  three runtime deps (`ink`, `react`, `@clack/prompts`) are not among them.
