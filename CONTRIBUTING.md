@@ -137,13 +137,19 @@ you.
 
 ### Every release
 
-**Before the first release only**: the npm name (`@callstack/repack-atlas`) and
-the first version (`0.1.0`) are answered in
+The npm name (`@callstack/repack-atlas`) and the first version (`0.1.0`,
+published 2026-10-15) are settled in
 [`docs/decisions/npm-publish.md`](docs/decisions/npm-publish.md) §1–§2 — that
 section also states what must still be true at publish time: an authenticated
 session (`npm whoami`, TFA `auth-and-writes`), and the branch landed, because
 step 2 can only link a changeset to a commit or PR that already exists on
-GitHub.
+GitHub. Re-ask the name and the version whenever a later release leaves either
+unanswered.
+
+Do the bump on local `main`, not on a branch: `pnpm publish` refuses to run
+from any branch outside `publish-branch` (`master|main` by default, and this
+repo has no `.npmrc`), so a `chore/release-*` branch stops on an interactive
+prompt at the last step.
 
 1. The release must be described by a changeset. Contributors add one per PR
    (`pnpm changeset`, or the "Add a changeset" section below); the release PR

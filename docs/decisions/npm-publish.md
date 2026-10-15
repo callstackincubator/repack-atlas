@@ -1,10 +1,10 @@
 # Decision: publishing `repack-atlas` to npm
 
-**Status: prepared, not published.** The npm name, the first version and the
-login are settled (decisions 5, 7, 8); nothing in this repo has touched npm.
+**Status: published.** `@callstack/repack-atlas@0.1.0` is on npm (tag `v0.1.0`).
 This document records what was verified, what is decided, and what is still
-open, so the day someone types `pnpm publish` it is a deliberate act and not an
-experiment.
+open, so each release is a deliberate act and not an experiment. Sections that
+say "before the first publish" describe the state the first release started
+from and are kept as the evidence trail for the runbook.
 
 `docs/PRD.md` §13 stays the source of truth for the packaging design and points
 here for everything release-related.
@@ -22,9 +22,10 @@ here for everything release-related.
 | 7 | **The first published version is `0.1.0`** — the `minor` changeset applied to `0.0.1`. Still `0.x`: the two public subpaths are not declared stable. | owner, 2026-10-14 |
 | 8 | **`npm login` is done** on this machine as `eduardogracianock`; TFA mode `auth-and-writes`, so `pnpm publish` still needs a human OTP in a real terminal. | owner, 2026-10-14 |
 
-## 2. Still open before the first publish
+## 2. Prerequisites the first publish had to clear
 
-**The first version: `0.1.0`** — owner decision, 2026-10-14. `0.x` on purpose:
+**The first version: `0.1.0`** — owner decision, 2026-10-14; published as such
+on 2026-10-15. `0.x` on purpose:
 nobody has said the `@callstack/repack-atlas/plugin` and
 `@callstack/repack-atlas/introspection` subpaths are a stable contract yet — those are public API (PRD §8.2), and they
 are also the reason this is not "just a CLI". The committed changeset is `minor`,
@@ -34,7 +35,8 @@ package.
 
 **Account prerequisites, re-checked 2026-10-14 (authenticated):**
 
-- `@callstack/repack-atlas` is still free on the registry (404).
+- `@callstack/repack-atlas` was free on the registry (404) until the first
+  publish claimed it.
 - `npm login` was run by the owner in a real terminal: `npm whoami` answers
   `eduardogracianock`, a token sits in `~/.npmrc`, registry is
   `https://registry.npmjs.org/`. The E401 recorded earlier is resolved.
@@ -180,18 +182,23 @@ Landed as **PR #79** (7 commits on `feat/npm-publish-readiness`, base
 `origin/main` = `83045ae`): manifest fixed and renamed to
 `@callstack/repack-atlas`, `check:publish` + `publish:preflight` with tests,
 changesets config and one changeset, the CI guard, the runbook, the skill and
-this document. **Nothing published**: no `pnpm publish`, no `npm login`, no tag,
-and `npm view @callstack/repack-atlas version` still answers 404.
+this document.
 
-Latest observed preflight, on `0.0.1`, after the G2/G3/G6 fixes below:
+**Released 2026-10-15.** #79 merged as `b02ad27`; `changeset version` on a clean
+`main` produced `0.0.1 → 0.1.0` (`2ca6983`); the human ran `pnpm publish` with a
+fresh OTP; `npm view @callstack/repack-atlas version` answers `0.1.0` and
+`v0.1.0` is tagged. The published tarball's sha256 matched the local `pnpm pack`
+and the G6 hash, so the artifact users install is the one the gates tested.
+
+Latest observed preflight before that publish, on `0.1.0`:
 
 ```
 G1 manifest        PASS 247 packaged file(s)
-G2 install         PASS fresh project installed @callstack/repack-atlas@0.0.1
-G3 bin             PASS repack-atlas 0.0.1 via node_modules/.bin
+G2 install         PASS fresh project installed @callstack/repack-atlas@0.1.0
+G3 bin             PASS repack-atlas 0.1.0 via node_modules/.bin
 G4 public API      PASS plugin, introspection -> function
 G5 behavior        PASS drift fixture -> 1 + SHARED_VERSION_DRIFT; clean fixture -> 0
-G6 reproducibility PASS two packs identical (d8ad6427ee13…)
+G6 reproducibility PASS two packs identical (fc7b2644933e…)
 ```
 
 The hash is a property of the tree, so it moves whenever a file changes; read it

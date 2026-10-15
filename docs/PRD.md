@@ -618,15 +618,17 @@ pattern); no `pull_request_target` with write tokens.
   (`federation-studio`, `super-app-devtools`, `mf-atlas`) are superseded by the
   repo that exists — but see risk R5 ("Atlas" collides with the React Native
   *Atlas* build-system name; confirm before public launch).
-- **No npm publish until the incubator decision.** A scope rename later means a
-  new package + deprecating the old one; the GitHub transfer itself is trivial.
-  The publish decision, the runbook and the open questions now live in
-  [`docs/decisions/npm-publish.md`](decisions/npm-publish.md) — nothing is
-  published as of 2026-10-14.
+- ~~No npm publish until the incubator decision~~ **Published 2026-10-15:**
+  `@callstack/repack-atlas@0.1.0` is on npm, tagged `v0.1.0`. The incubator
+  question resolved as the `@callstack/` scope (decision 5). A scope rename later
+  still means a new package + deprecating the old one; the GitHub transfer itself
+  is trivial. The publish decision, the runbook and the open questions live in
+  [`docs/decisions/npm-publish.md`](decisions/npm-publish.md).
 - ~~During phases 1–2 consumers install from git~~ **Invalidated 2026-10-14:**
   installing from a git URL yields no runnable package (`files: ["dist"]` + a
-  gitignored `dist/`, verified with both npm and pnpm). Until the first publish,
-  consumers build from a clone; README documents that.
+  gitignored `dist/`, verified with both npm and pnpm). Consumers install the npm
+  package; building from a clone is for working on Atlas itself. README documents
+  both.
 - Versions via changesets from day 1 (release lines are
   cheap to have honest), `CHANGELOG.md` generated, first npm publish is a tagged
   decision in phase 3. Changesets are wired up as of 2026-10-14 but run **by

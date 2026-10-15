@@ -33,7 +33,22 @@ concluded this is workspace tooling, not bundler scope, so it lives here; core
 Re.Pack keeps only the small enabling changes. `docs/PRD.md` is the source of
 truth for the whole design.
 
-## Quickstart
+## Install
+
+Atlas is on npm as **`@callstack/repack-atlas`**. Add it to the workspace you
+want to check — it is a dev tool, so keep it a devDependency:
+
+```bash
+npm install -D @callstack/repack-atlas   # or: pnpm add -D @callstack/repack-atlas
+npx repack-atlas --version               # or: pnpm exec repack-atlas --version
+```
+
+Requires Node >= 22.13. `@callstack/repack` is a peer dependency, resolved from
+your project — Atlas never bundles it. The package ships `dist/` only: the
+fixture workspaces behind the demo below live in this repository, not in the
+published artifact, so the demo and the contributor commands need a clone.
+
+## Quickstart (from a clone)
 
 Requirements: Node >= 22.13, pnpm >= 10 (`packageManager` pins the exact version).
 
@@ -222,22 +237,24 @@ Two optional `repack-federation.json` fields are easy to misread:
 
 ### Installing Atlas in a project
 
-The published name is **`@callstack/repack-atlas`**, not published yet. Until the
-first release lands, build it from a clone — and do not install from a git URL:
-`dist/` is gitignored, so a git install gets sources only and the
-`repack-atlas` binary is missing.
+From npm, as above — `npm install -D @callstack/repack-atlas`. The binary is
+`repack-atlas` and the two plugin subpaths are imported from the same package,
+so an npm install is all a project needs.
+
+Do not install from a git URL: `dist/` is gitignored, so a git install gets
+sources only and the `repack-atlas` binary is missing.
+
+Building from a clone is for working on Atlas itself. To try an unreleased
+commit from a project, link that clone (an absolute path;
+`pnpm link --global` is not valid on pnpm 11) and rebuild it after each change:
 
 ```bash
 git clone https://github.com/callstackincubator/repack-atlas.git
 cd repack-atlas && pnpm install && pnpm build
 
-# In the project that should get the `repack-atlas` binary, point pnpm at this
-# clone (an absolute path; `pnpm link --global` is not valid on pnpm 11):
+# In the project that should get the `repack-atlas` binary:
 pnpm link /absolute/path/to/repack-atlas
 ```
-
-Once it is on npm, this becomes `npm install @callstack/repack-atlas`; the
-binary stays `repack-atlas` either way.
 
 In the app you want to instrument, add the two Atlas plugins (see
 [`docs/demo-showcase.md`](https://github.com/callstackincubator/repack-atlas/blob/main/docs/demo-showcase.md));

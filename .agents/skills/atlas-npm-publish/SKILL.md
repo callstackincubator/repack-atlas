@@ -25,8 +25,9 @@ name, first version) and the evidence behind every rule below.
 ## Stop before you publish
 
 Two questions are **not yours to answer**, and both are irreversible once the
-registry sees them. Both are settled for the first release — name
-`@callstack/repack-atlas`, version `0.1.0` (`docs/decisions/npm-publish.md` §1).
+registry sees them. The name is settled — `@callstack/repack-atlas`, first
+version `0.1.0`, published 2026-10-15 (`docs/decisions/npm-publish.md` §1). In a
+later release the version comes from the pending changesets, never from a guess.
 Re-ask whenever either is unanswered again:
 
 1. **The npm name.** Unscoped or `@callstack/…`, never `@callstackincubator/…`.
@@ -50,13 +51,18 @@ step 1, all cheap:
   so from an unpushed branch it can only emit a link-free bullet (or refuse —
   see the credit matrix in the decision doc §3). Fix the changeset, not the
   changelog.
-- **Fresh name**: `npm view <name> version` answers 404 before the first
-  publish. A 404 is the good answer; publishing under the scope is proven only
-  by the publish itself.
+- **Version is new**: `npm view <name> version` prints what is already on the
+  registry (`0.1.0` since 2026-10-15), and the bump must be above it. A `404`
+  returned right after a publish is the CDN's negative cache, not a missing
+  release — see "Prove it landed" before believing either answer.
 
 ## The runbook
 
-Work on a clean `main`. Run each step and read its output before the next.
+Work on a clean `main`, fast-forwarded over `origin/main`. Run each step and
+read its output before the next. Do not do the bump on a `chore/release-*`
+branch: `pnpm publish` only runs on `publish-branch` (`master|main` by default,
+and this repo has no `.npmrc`), so a branch stops the release on an interactive
+prompt after every gate has already passed.
 
 ```bash
 # 1. Generate the release. GITHUB_TOKEN is what buys PR/commit links and
@@ -125,6 +131,25 @@ npm view @callstack/repack-atlas version    # must print the version just publis
 git tag v<version> && git push && git push --tags
 ```
 
+### Prove it landed
+
+`npm view <name> version` is the lagging signal: after the first publish the
+packument kept answering `404` for about ten minutes while the version URL and
+the tarball already answered `200`. The `✅ Published package …` line is not
+proof either. Before tagging, or before concluding a publish failed, use the
+three signals that do not lag:
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" "https://registry.npmjs.org/@callstack%2Frepack-atlas/<version>"
+curl -s "https://registry.npmjs.org/-/package/@callstack%2Frepack-atlas/dist-tags"   # {"latest":"<version>"}
+cd /tmp && rm -rf probe && mkdir probe && cd probe && npm init -y >/dev/null && npm i @callstack/repack-atlas@<version> && ./node_modules/.bin/repack-atlas --version
+```
+
+Compare the downloaded tarball's `shasum -a 256` against your local `pnpm pack`
+and the G6 hash: that is what proves users receive the bytes the gates tested.
+**Never re-publish a version because a stale `404` said it was missing** — a
+version number is burned for good, even after unpublishing.
+
 ## Changesets
 
 One file per released change, added in the PR, not at release time:
@@ -153,4 +178,9 @@ add doctor --json output
   gitignored, so a git install has no code. Test the **tarball**.
 - Never add `NPM_TOKEN`, `NODE_AUTH_TOKEN`, or an npm trusted-publisher
   connection: publishing is manual by decision (PRD §13 + the decision doc).
+- Never publish from a branch that is not `main`, and never answer your way
+  through the `publish-branch` prompt: fast-forward local `main` instead.
+- Never treat a `404` from `npm view` as "not published yet" without checking
+  the version URL and `dist-tags`: republishing a burned version is
+  unrecoverable.
 - Never edit `CHANGELOG.md` by hand; regenerate from changesets.
