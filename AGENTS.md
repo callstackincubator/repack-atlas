@@ -109,7 +109,7 @@ src/
 │                        #   (interfaces only)
 ├── repack-bridge/       # the ONLY Re.Pack import surface
 │   ├── index.ts         #   = the bridge import surface (Atlas-owned)
-│   ├── plugin.ts        #   `repack-atlas/plugin` subpath: FederationManifestPlugin
+│   ├── plugin.ts        #   `@callstack/repack-atlas/plugin` subpath: FederationManifestPlugin
 │   │                    #   wrapper the showcase app adds to its rspack config
 │   └── vendored/        #   Atlas-owned fork of Re.Pack code, MIT headers, VENDORED.md
 ├── adapters/            # port implementations: workspace config reader,

@@ -171,7 +171,7 @@ export interface ProcessRunner {
 // --- ConfigIntrospector -----------------------------------------------------------
 //
 // Per the T0 decision (PRD §16 item 3) Atlas does NOT load user rspack configs
-// in-process. Users opt in to the `repack-atlas/introspection` plugin, which
+// in-process. Users opt in to the `@callstack/repack-atlas/introspection` plugin, which
 // writes a small JSON facts file into the app; this port reads and validates
 // it. Typed results, never throws.
 

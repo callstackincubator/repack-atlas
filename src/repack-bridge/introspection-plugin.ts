@@ -1,4 +1,4 @@
-// `repack-atlas/introspection` subpath — the opt-in declaration plugin a
+// `@callstack/repack-atlas/introspection` subpath — the opt-in declaration plugin a
 // user adds to each app's rspack config (docs/PRD.md §16 item 3, T0
 // decision: no in-process loading of user configs for the demo).
 //
