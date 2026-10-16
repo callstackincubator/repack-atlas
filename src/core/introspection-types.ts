@@ -1,7 +1,7 @@
 // Core-owned schema for the per-app introspection facts file
 // (`.repack-atlas/introspection.json`) — docs/PRD.md §16 item 3 (T0
 // decision): Atlas does not load user rspack configs in-process; users add
-// the opt-in `repack-atlas/introspection` plugin, which declares federation
+// the opt-in `@callstack/repack-atlas/introspection` plugin, which declares federation
 // facts into this file. Core owns the shape and the validator; the plugin
 // (bridge) writes it and the adapter (`src/adapters/introspection.ts`)
 // reads/validates it.

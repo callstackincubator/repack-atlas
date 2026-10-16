@@ -89,7 +89,14 @@ describe('createConfigIntrospector (reader side)', () => {
     assert.equal(result.status, 'failed');
     if (result.status !== 'failed') return;
     assert.equal(result.failure, 'missing');
-    assert.match(result.message, /repack-atlas\/introspection/);
+    // The message tells a user what to add to their rspack config, so it must
+    // name the published specifier. Since 0.1.0 the package is scoped, and the
+    // old unscoped spelling points at a name that installs nothing (#80). Pinned
+    // both ways below: the scoped form must be present, the quoted old form must
+    // not. The path also contains the `.repack-atlas/…` artifact directory, which
+    // keeps its spelling on purpose and must not satisfy the first assertion.
+    assert.match(result.message, /@callstack\/repack-atlas\/introspection/);
+    assert.doesNotMatch(result.message, /'repack-atlas\/introspection'/);
   });
 
   it('reads and types a valid document', async () => {
