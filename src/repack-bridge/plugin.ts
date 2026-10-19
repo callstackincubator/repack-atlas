@@ -1,4 +1,4 @@
-// `repack-atlas/plugin` subpath — the demo-story surface: the showcase app
+// `@callstack/repack-atlas/plugin` subpath — the demo-story surface: the showcase app
 // adds the Atlas-owned federation-manifest plugin to each app's rspack config
 // (docs/PRD.md §8.1 item 1, §8.2). Re.Pack will not merge the upstream
 // manifest branch, so this plugin is a supported Atlas package.
@@ -9,7 +9,7 @@
 // options to the vendored `applyFederationManifest`, which taps the compiler
 // hooks and emits `repack-federation-manifest.json`.
 //
-// Public API: `repack-atlas/plugin` follows semver once published, and Atlas
+// Public API: `@callstack/repack-atlas/plugin` follows semver once published, and Atlas
 // validates compatibility with Re.Pack / Module Federation (see VENDORED.md).
 
 import { mkdirSync, writeFileSync } from 'node:fs';

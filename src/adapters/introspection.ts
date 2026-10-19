@@ -1,6 +1,6 @@
 // `ConfigIntrospector` adapter (docs/PRD.md §16 item 3, T0 decision): Atlas
 // never loads user rspack configs in-process. Apps opt in by adding the
-// `repack-atlas/introspection` plugin to their rspack config, which writes
+// `@callstack/repack-atlas/introspection` plugin to their rspack config, which writes
 // `<appRoot>/.repack-atlas/introspection.json` declaring the federation
 // facts Atlas needs before a build. This file reads and validates it through
 // the `ProjectFs` port; the shape + validator are core-owned
@@ -9,7 +9,7 @@
 // User-facing config snippet (document in README at T11):
 //
 //   // rspack.config.mts (host) — mini-apps analogous
-//   import { IntrospectionPlugin } from 'repack-atlas/introspection';
+//   import { IntrospectionPlugin } from '@callstack/repack-atlas/introspection';
 //
 //   export default {
 //     plugins: [
@@ -56,7 +56,7 @@ export function createConfigIntrospector(fs: ProjectFs): ConfigIntrospector {
           failure: 'missing',
           message:
             `No introspection file at ${filePath}. Add the ` +
-            `'repack-atlas/introspection' plugin to this app's rspack ` +
+            `'@callstack/repack-atlas/introspection' plugin to this app's rspack ` +
             `config to declare its federation facts.`,
         };
       }

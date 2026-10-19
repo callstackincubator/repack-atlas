@@ -56,7 +56,7 @@ These live in Atlas-owned files (`src/repack-bridge/plugin.ts`,
 `src/repack-bridge/rspack-compiler.ts`), **not** under `vendored/`. So far the
 vendored files above match upstream commit `c5df67f0` modulo A1–A3.
 
-- **B1 — `writeToDisk` option on the `repack-atlas/plugin` wrapper**:
+- **B1 — `writeToDisk` option on the `@callstack/repack-atlas/plugin` wrapper**:
   under the Re.Pack dev server (`@callstack/repack-dev-server` 5.3.0, watch
   mode) compilation assets live in a memory output FS and the dev server
   serves neither them nor the manifest — verified with real 404s on every

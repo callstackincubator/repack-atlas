@@ -101,6 +101,7 @@ checkout, observed 2026-09-30.
 | Agent files | `pnpm agent:check` | `agent-sync: OK ...`, exit 0 |
 | Vendored provenance | `pnpm check:vendored` | `vendored-check: OK - 6 vendored file(s) accounted for in VENDORED.md` |
 | Publish manifest | `pnpm check:publish` | `publish-check: OK - @callstack/repack-atlas@0.0.1 with 247 packaged file(s), 3 workflow(s) checked` |
+| Scoped specifier | `pnpm check:specifiers` | `specifier-check: OK - N tracked file(s) scanned` |
 | Commit messages (PR gate) | `pnpm check:commits` | `commit-check: OK - N item(s) checked` |
 | Studio e2e | `pnpm test:e2e` | `7 passed`, needs `pnpm exec playwright install chromium` |
 

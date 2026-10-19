@@ -31,9 +31,11 @@ Two checkouts side by side:
    ```
 
 2. In the showcase fork (branch `atlas-demo`), the demo wiring is:
-   - `repack-atlas` as a `file:../../../repack-atlas` devDependency of
-     `packages/{host,auth,trading,wallet}`
-     (commit `feat(deps): add repack-atlas as local file dependency`);
+   - `@callstack/repack-atlas` as a `file:../../../repack-atlas` devDependency of
+     `packages/{host,auth,trading,wallet}`. The dependency **key** must be the
+     scoped name: a `file:` dep is linked into `node_modules` under the key it is
+     declared with, and the imports below use that name. The `atlas-demo` branch
+     still carries the pre-rename key, so re-arm it with the scoped one (#80).
    - each app's `rspack.config.ts` adds two plugins next to
      `ModuleFederationPluginV2`:
      `FederationManifestPlugin` from `@callstack/repack-atlas/plugin` with

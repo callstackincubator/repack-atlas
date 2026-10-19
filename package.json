@@ -57,6 +57,7 @@
     "check:publish": "node scripts/publish-check.mjs",
     "publish:preflight": "node scripts/publish-preflight.mjs",
     "check:commits": "node scripts/commit-check.mjs",
+    "check:specifiers": "node scripts/specifier-check.mjs",
     "agent:sync": "node scripts/agent-sync.mjs",
     "agent:check": "node scripts/agent-sync.mjs --check",
     "test:e2e": "playwright test",

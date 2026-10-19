@@ -65,12 +65,12 @@ So a release PR references itself as `pr: #<n>` (the number is known once the PR
 is opened, before the version bump), and the runbook's "keep `GITHUB_TOKEN` set"
 is load-bearing, not decorative.
 
-**One consequence of the scope, in another repo:** `super-app-showcase` imports
-`repack-atlas/plugin` / `repack-atlas/introspection` in four `rspack.config.ts`
-and pins `"repack-atlas": "file:../../../repack-atlas"` in four `package.json`.
-When Atlas ships as `@callstack/repack-atlas`, that demo branch moves to the
-scoped specifier. Not a blocker here — nothing in this repo imports the root,
-and the two subpaths ship unchanged.
+**One consequence of the scope, in another repo:** the `atlas-demo` branch of
+`super-app-showcase` still carries the pre-rename unscoped import specifier — in
+four `rspack.config.ts` and as the `file:` dependency key in four
+`package.json` (`file:../../../repack-atlas` is the clone **directory**, so that
+path keeps its spelling; only the dependency key changes). The branch is
+self-consistent and still runs, and #80 tracks moving it to the scoped form.
 
 ## 2b. What used to be open
 

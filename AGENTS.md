@@ -79,6 +79,8 @@ pnpm check:vendored # CI: every vendored file in VENDORED.md with a commit
                  # sha + Copyright header (exit 1 on drift)
 pnpm check:publish # CI: the publish manifest is honest (every entry point
                  # ships in the real tarball; no stale-dist publish)
+pnpm check:specifiers # CI: no pre-rename unscoped subpath import specifier
+                 # left in the tracked tree (exit 1 on drift)
 pnpm publish:preflight # before a publish: 6 gates on the installed tarball
                  # (install, bin, public API, doctor behavior, reproducible pack)
 pnpm check:commits # CI: Conventional Commits + no AI attribution on
@@ -86,8 +88,8 @@ pnpm check:commits # CI: Conventional Commits + no AI attribution on
 ```
 
 CI (`.github/workflows/ci.yml`) is light: lint, typecheck, build, test,
-`agent:check`, `check:vendored` and `check:publish` in one Linux / Node 22 job
-per PR. The full
+`agent:check`, `check:vendored`, `check:specifiers` and `check:publish` in one
+Linux / Node 22 job per PR. The full
 matrix (macOS + Linux × Node 22/24) and the Playwright studio-e2e job live in
 `ci-full.yml` and run only when a maintainer adds the `ready-to-merge` label
 (or via `workflow_dispatch`). The PR gates live in `pr-checks.yml`: PR title,
@@ -109,7 +111,7 @@ src/
 │                        #   (interfaces only)
 ├── repack-bridge/       # the ONLY Re.Pack import surface
 │   ├── index.ts         #   = the bridge import surface (Atlas-owned)
-│   ├── plugin.ts        #   `repack-atlas/plugin` subpath: FederationManifestPlugin
+│   ├── plugin.ts        #   `@callstack/repack-atlas/plugin` subpath: FederationManifestPlugin
 │   │                    #   wrapper the showcase app adds to its rspack config
 │   └── vendored/        #   Atlas-owned fork of Re.Pack code, MIT headers, VENDORED.md
 ├── adapters/            # port implementations: workspace config reader,
@@ -134,6 +136,7 @@ VENDORED.md              # provenance ledger for src/repack-bridge/vendored/
 scripts/agent-sync.mjs   # generates the adapters + the tables below
 scripts/vendored-check.mjs # CI provenance guard for VENDORED.md (pnpm check:vendored)
 scripts/commit-check.mjs # CI commit-message guard (pnpm check:commits)
+scripts/specifier-check.mjs # CI scoped-specifier guard (pnpm check:specifiers)
 .github/workflows/       # ci.yml (light) + ci-full.yml (matrix + e2e) + pr-checks.yml
 ```
 
