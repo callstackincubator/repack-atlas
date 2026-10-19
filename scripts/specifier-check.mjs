@@ -37,6 +37,14 @@ const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 /** Ending a line with this word allows the unscoped spelling on that line only. */
 export const ALLOW_PRAGMA = 'allow-unscoped-specifier';
 
+/**
+ * The pragma is an end-of-line marker, not a keyword. Matching it anywhere
+ * would let prose that merely names the pragma, or a suffixed variant such as
+ * `no-allow-unscoped-specifier`, mute the rule from anywhere on the line. The
+ * leading boundary rejects a hyphen or word character glued to the front.
+ */
+const PRAGMA_AT_LINE_END = new RegExp(`(?:^|[^\\w-])${ALLOW_PRAGMA}\\s*$`);
+
 /** Repo-relative path prefixes that are out of scope, history prose mainly. */
 export const EXCLUDED_PREFIXES = ['odd/'];
 
@@ -60,7 +68,7 @@ export function findUnscopedSpecifiers(path, text) {
   const lines = text.split(/\r?\n/);
   for (let index = 0; index < lines.length; index += 1) {
     const line = lines[index] ?? '';
-    if (line.includes(ALLOW_PRAGMA)) continue;
+    if (PRAGMA_AT_LINE_END.test(line)) continue;
     if (UNSCOPED.test(line)) {
       found.push({ path, line: index + 1, text: line.trim() });
     }

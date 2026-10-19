@@ -82,6 +82,30 @@ test('the pragma allows one line and only that line', () => {
   );
 });
 
+test('the pragma only counts at the end of the line', () => {
+  // Review feedback on #81: a bare `includes` turned any mention of the word
+  // into a mute, so quoting the pragma in prose or suffixing it disabled the
+  // rule from anywhere. The exemption is an end-of-line marker; anything
+  // else keeps the line under the rule.
+  assert.deepEqual(
+    hitLines(`use ${BAD_PLUGIN} now // ${ALLOW_PRAGMA} is documented above`),
+    [1],
+  );
+  assert.deepEqual(
+    hitLines(`use ${BAD_PLUGIN} now // ${ALLOW_PRAGMA}-disabled`),
+    [1],
+  );
+  assert.deepEqual(
+    hitLines(`see ${ALLOW_PRAGMA} earlier for ${BAD_PLUGIN}`),
+    [1],
+  );
+  // Trailing whitespace and comment punctuation before the marker stay fine.
+  assert.deepEqual(
+    hitLines(`use ${BAD_PLUGIN} now // ${ALLOW_PRAGMA}  `),
+    [],
+  );
+});
+
 test('an unrelated word does not silence the rule', () => {
   assert.deepEqual(hitLines(`allow ${BAD_PLUGIN} here`), [1]);
 });
