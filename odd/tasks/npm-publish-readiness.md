@@ -542,3 +542,38 @@ at every commit, not just at the tip.
   branch protection; the release commit landed the same way), and **do not burn
   `0.1.1`** for the npm page — refresh it with the next real release. So the
   npm page is knowingly stale until then.
+
+- **L26** (#81 made the scoped specifier a gate; #80 still waits on the showcase).
+  The sweep from #80 shipped as PR **#81**, merged as `72ef823`
+  (2026-10-19T17:16:32Z, 17 files, +353/-22, five commits: `955ac8c`, `4e169cc`,
+  `e8375c0`, `a2c31a4`, `ec21193`). Built to outlive the prose rule that failed
+  first: `check:specifiers` scans the **tracked** tree (333 files, exit 0) and
+  flags the import specifier only, so the bin, the `file:` clone paths and the
+  `.repack-atlas/` artifacts keep their spelling on purpose, and `odd/` is
+  excluded so dated records keep their provenance.
+  Copilot found one real defect, and it was mine: the allow-pragma was matched
+  with `includes()`, so naming `allow-unscoped-specifier` anywhere on a line (in
+  prose, or suffixed as `allow-unscoped-specifier-disabled`) muted the rule,
+  while that same file documented it as a line-ending marker. `ec21193` anchors
+  it to a token at end of line, so a hyphen or word character cannot glue
+  another word to it; the two pragma uses in the tree were already end-of-line,
+  so no existing suppression moved. The review thread got one line back: the
+  evidence lives in the commit message.
+  Proven at step level, not job level: run `39292715364` on the `main` tip, job
+  `Lint, typecheck, build & test (Linux, Node 22)`, step 12 `Scoped specifier
+  check` = success. Job level would have hidden a step that quietly stopped
+  running. Gates on this tree: `typecheck` 0, `lint` 0, `agent:check` OK (6
+  skills), `check:specifiers` OK, `pnpm test` 985/985.
+  Pending on purpose: `.changeset/scoped-subpath-specifiers.md` is a **patch**
+  carrying `pr: #81`, so the next `changeset version` yields `0.1.1` with the
+  guard plus the `doctor` message fix (it stopped pointing at a package name
+  that is not on the registry). That also refreshes the stale npm page from L25
+  the honest way: a real change earns the release, a README alone does not.
+  **#80 stays open, and the reason is not this repo.** Its commit 3 is the
+  showcase demo, a separate repository: `super-app-showcase` PR #1
+  (`atlas-demo-scoped-names` into `atlas-demo`, `02624ea` + `fdb79ca`, 9 files)
+  is open, not merged. Checked rather than assumed: `origin/atlas-demo` still
+  pairs four `"repack-atlas": "file:../../../repack-atlas"` keys with four
+  unscoped `repack-atlas/plugin` imports, which is self-consistent under the
+  `file:` key rule recorded in the issue, so the demo runs today under the old
+  name and the wait breaks nothing. Close #80 when that PR lands.
