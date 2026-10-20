@@ -90,47 +90,45 @@ of inventing them, and lands issue-first behind a PR.
   answer (exit 2). S6 records the correction rather than repeating the paraphrase.
 - **L3** (parent, measured + read): two facts the demo hides. (a) `.repack-atlas/introspection.json`
   without `schemaVersion: 1` is rejected silently: `init` prints `facts: directory-name`
-  and drops `port`; with `schemaVersion: 1` it prints `facts: introspection, port 8081`
-  (`src/core/introspection-types.ts:82`, `src/cli/init.ts:364-384`). (b) `init` writes
-  the ref `manifests/<app>.json`, while `writeToDisk: true` writes
-  `<appRoot>/repack-federation-manifest.json` (`plugin.ts:117-121`,
-  `DEFAULT_MANIFEST_FILENAME` in `vendored/federationManifest/types.ts:11`). The two do
-  not meet: `doctor` still exits 2 after a build until the ref is edited, which is why
-  the showcase config is hand-authored (`docs/demo-showcase.md:133-136`). The guide must
-  show that edit, not pretend `init` output is final.
+  and drops `port`; with it, `facts: introspection, port 8081`
+  (`src/core/introspection-types.ts:82`, `src/cli/init.ts:364-384`). (b) `init` writes the
+  ref `manifests/<app>.json`, `writeToDisk: true` writes
+  `<appRoot>/repack-federation-manifest.json` (`plugin.ts:117-121`, `types.ts:11`). The two
+  never meet: `doctor` stays at 2 after a green build until the ref is hand-edited, which
+  is why the showcase config is hand-authored (`docs/demo-showcase.md:133-136`). The guide
+  must show that edit, not present `init` output as final.
 - **L4** (parent, verified): `docs/` is not in `files` (`package.json` ships `dist` only)
-  and `readmeDeadLinks` scans `README.md` only, so guide-to-guide relative links are
-  fine and a README-to-docs relative link is not. PR #1 still `OPEN`; the showcase
-  remote for this work is a public fork of `callstack/super-app-showcase`.
+  and `readmeDeadLinks` scans `README.md` only, so guide-to-guide relative links are fine
+  and a README-to-docs relative link is not. Showcase PR #1 still `OPEN`.
 - **L5** (parent, after T1/T2): the writer produced `docs/setup-your-project.md` and the
-  README pointer. Parent verification, not the writer's word: every cited value was
-  re-checked against `git show origin/atlas-demo-scoped-names:...` (host `remotes` :21-25,
-  `shared` :26 `getSharedDependencies({eager: true})`, MF2 :96-101, manifest plugin :102-108,
-  introspection :109-121; auth `exposes` :20-24, `eager: false` :25, `filename` :70, :75-82,
-  :83-95), the guide is 0 non-ASCII lines, the README diff adds 0 non-ASCII lines, and
-  `docs/PRD.md` 8.2 does say what the guide attributes to it. Restored one nuance the
-  writer dropped: subpaths are public API *under semver*, which the README paragraph said
-  and PRD 8.2 confirms. Gates observed on this branch: `typecheck` 0, `lint` 0, `test` 0
-  (985 pass, 0 fail), `check:publish` 0 (247 packaged files, README dead-link rule
-  included), `agent:check` 0, `check:specifiers` 0 with the guide staged (333 files; the
-  same run cannot see an untracked file, so staging it is what gives the check signal).
-  Pre-existing, out of scope, follow-up candidate: `README.md` carries 17 non-ASCII lines
-  on `main` (em dash, `->`, `x`, section sign), so an "ASCII scan over README prints
-  nothing" gate is unsatisfiable without a separate authorized sweep, and no CI script
-  enforces ASCII anyway. S6 correction stands as written in L2: `init` answers with exit
-  0, `doctor` is the one that cannot answer.
-- **L5b** (pre-commit scan): `odd/` is tracked and this repo publishes, so by the
+  README pointer. Parent verification, not the writer's word: every cited value re-checked
+  against `git show origin/atlas-demo-scoped-names:...` (host `remotes` :21-25, `shared`
+  :26, MF2 :96-101, manifest :102-108, introspection :109-121; auth `exposes` :20-24,
+  `eager: false` :25, `filename` :70, :75-82, :83-95); guide 0 non-ASCII lines, README diff
+  adds 0; `docs/PRD.md` 8.2 does say what the guide attributes to it. Restored a nuance the
+  writer dropped: the subpaths are public API *under semver*. Gates on this branch:
+  `typecheck`, `lint`, `build`, `test` (985 pass), `check:publish` on the fresh build (247
+  files, README dead-link rule included), `agent:check`, `check:specifiers` with the guide
+  staged (333 files; an untracked file is invisible to that check). Pre-existing follow-up,
+  not ours: `README.md` carries 17 non-ASCII lines on `main`, so "the ASCII scan prints
+  nothing" cannot hold over README.md without a separately authorized sweep, and no CI
+  script enforces ASCII. S6 correction stands per L2.
+- **L5b** (pre-commit scan): `odd/` is tracked and this repo publishes, so per the
   `npm-publish-readiness` precedent this doc carries no ticket IDs beyond the public issue
-  number, no Notion/Slack links and no colleague names; the personal path in S2 is elided
-  to `<user>/internals/forks`, bending the verbatim rule in that one spot on purpose.
-
+  number, no Notion/Slack links, no colleague names; the personal path in S2 is elided to
+  `<user>/internals/forks`, bending the verbatim rule in that one spot on purpose.
+- **L5c** (independent read-only review, PR #83, agent-before-human rule): a verify agent
+  re-derived every snippet from the source branch after whitespace normalization (all six
+  plugin blocks identical, only Prettier spacing differs), reproduced all four
+  measured-behavior claims on `dist/cli.js`, and confirmed the ref mismatch behaviorally:
+  doctor `2` with manifests only where `writeToDisk` writes, then `0` after the exact
+  two-line edit the guide shows. Its one finding on our diff, five accented lines in this
+  doc, is FALSE: the committed file scans 0 non-ASCII lines. Verdicts get re-measured.
 - **L6** (parent, incident on our side, recorded so it is not repeated): during the L2/L3
-  measurements one command read `WS` from a scratch file that an earlier `set -e` death
-  had prevented it from writing. `WS` expanded empty, `cd ""` failed without aborting the
+  measurements one command read `WS` from a scratch file that an earlier `set -e` death had
+  prevented it from writing. `WS` expanded empty, `cd ""` failed without aborting the
   script, and the fixture `mkdir`/`cat >` landed inside the repo as untracked
   `packages/{host,auth}/.repack-atlas/introspection.json`. Caught from `git status
-  --porcelain` while reviewing the writer's diff, confirmed by content (the two fake
-  documents, no `schemaVersion`), and moved to `/tmp/atlas-stray-quarantine/packages-stray`
-  rather than deleted; nothing tracked was touched. Guard: write fixtures only through an
-  absolute path echoed in the same command, never a variable sourced from a file that
-  might not exist.
+  --porcelain` while reviewing the writer's diff, confirmed by content, and moved out to a
+  scratch quarantine rather than deleted; nothing tracked was touched. Guard: write
+  fixtures only through an absolute path echoed in the same command.
