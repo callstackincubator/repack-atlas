@@ -124,6 +124,8 @@ of inventing them, and lands issue-first behind a PR.
   doctor `2` with manifests only where `writeToDisk` writes, then `0` after the exact
   two-line edit the guide shows. Its one finding on our diff, five accented lines in this
   doc, is FALSE: the committed file scans 0 non-ASCII lines. Verdicts get re-measured.
+- **L7** (native RDD receipt, target sha256:80af1469): low tier (non_executable_only) closed at START
+  with no lenses; acknowledge-approved burned revision sha256:b2add26f, delivery stays ordinary policy.
 - **L6** (parent, incident on our side, recorded so it is not repeated): during the L2/L3
   measurements one command read `WS` from a scratch file that an earlier `set -e` death had
   prevented it from writing. `WS` expanded empty, `cd ""` failed without aborting the
