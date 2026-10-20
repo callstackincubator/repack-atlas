@@ -1,5 +1,15 @@
 # @callstack/repack-atlas
 
+## 0.1.1
+
+### Patch Changes
+
+- [#81](https://github.com/callstackincubator/repack-atlas/pull/81) [`72ef823`](https://github.com/callstackincubator/repack-atlas/commit/72ef8237ed9d4efbf3cf6709c6b4ddbab773441f) Thanks [@gedu](https://github.com/gedu)! - `doctor` now names the published scoped plugin subpath in its
+  missing-introspection message and in the config example, instead of the
+  pre-rename spelling that pointed at a package name which is not on the
+  registry. Adds `pnpm check:specifiers`, a CI guard that fails if that spelling
+  reappears anywhere in the tracked tree.
+
 ## 0.1.0
 
 ### Minor Changes

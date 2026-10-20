@@ -1,6 +1,6 @@
 {
   "name": "@callstack/repack-atlas",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Local developer tooling for React Native Module Federation workspaces built with Re.Pack.",
   "license": "MIT",
   "type": "module",
