@@ -209,14 +209,10 @@ the rest.
 
 ### Your own workspace
 
-Atlas reads `repack-federation.json` plus one federation manifest per app. To
-point it at a real project, add two plugins to each app's rspack config:
-`@callstack/repack-atlas/plugin` (emits the manifest) and
-`@callstack/repack-atlas/introspection`
-(feeds `init` and the workspace config). Both are opt-in. Both subpaths are
-Atlas public API (semver applies once published), and Re.Pack / Module
-Federation compatibility is validated by Atlas, not upstream; see PRD §8.2.
-Then:
+Atlas reads `repack-federation.json` plus one federation manifest per app, both
+produced by two plugins you add to each app's rspack config. The wiring,
+host and remote snippets included, is in
+[`docs/setup-your-project.md`](https://github.com/callstackincubator/repack-atlas/blob/main/docs/setup-your-project.md).
 
 ```bash
 npx repack-atlas init --workspace /path/to/workspace   # discovers apps, writes root and port
