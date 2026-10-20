@@ -577,3 +577,47 @@ at every commit, not just at the tip.
   unscoped `repack-atlas/plugin` imports, which is self-consistent under the
   `file:` key rule recorded in the issue, so the demo runs today under the old
   name and the wait breaks nothing. Close #80 when that PR lands.
+
+- **L27** (the second release fired: `@callstack/repack-atlas@0.1.1` is on npm).
+  The pending patch changeset from L26 was released on schedule, and it is the
+  first release that proves the runbook works on a non-first version. On a clean
+  `main` at `56288dc`: `GITHUB_TOKEN=$(gh auth token) pnpm changeset version` ->
+  `0.1.0 -> 0.1.1`, the changeset consumed, and the CHANGELOG line carried the
+  #81 link, the `72ef823` link and `Thanks [@gedu]` - the `pr:` reference paying
+  off end to end for the first time. Generated, never hand-edited. Committed as
+  `29c66db chore(release): v0.1.1`. `pnpm publish:preflight` on that tree: **all
+  six gates PASS**, exit 0 (G1 247 files | G2 install `0.1.1` | G3 bin
+  `repack-atlas 0.1.1` | G4 plugin + introspection are functions | G5 drift
+  fixture -> `1` + `SHARED_VERSION_DRIFT`, clean -> `0` | G6 two packs identical
+  `922703e435d6...`).
+  One precondition broke and it was worth naming: `npm whoami` -> **E401**, the
+  token stored in `~/.npmrc` had expired since L24. That did not stop the gates
+  (G2/G5 install the local tarball, and public registry reads are anonymous -
+  measured: a clean project installed `0.1.0` fine while `whoami` was dead), it
+  only blocked the publish, which was the human's step anyway. Owner ran
+  `npm login` + `pnpm publish` with a fresh OTP.
+  Proven landed with the three non-lagging signals, plus the hash: version URL
+  200, `dist-tags.latest = 0.1.1`, a fresh install printed `repack-atlas 0.1.1`,
+  and the tarball downloaded from the registry sha256-matched the local
+  `pnpm pack` and G6 (`922703e435d6...`). `main` pushed and `v0.1.1` tagged only
+  after that.
+  L25's rule was applied instead of re-learned: after the publish, grep the docs
+  for the state just changed. Three sentences claimed the *current* registry
+  version and were now wrong: the skill's precondition line, the decision doc's
+  `Status:` header, and its "latest observed preflight" block, which quoted the
+  `0.1.0` hashes my run had just superseded. Fixed in the same pass; the skill
+  now points at the decision doc instead of freezing a number, which is what
+  rotted. Historical records (PRD's struck-through publish line, CONTRIBUTING's
+  "first version", the `0.1.0` rename note in `specifier-check.mjs`) stay as
+  written. Consequence: this release refreshed the npm page README from the
+  tarball, so the staleness accepted in L25 is closed - with a real change in
+  front of it, which was the condition the owner set.
+  Native review covered the release commit as its own candidate (tier medium,
+  `package.json` counted as a configuration change, 3 files / 23 lines, 2 lenses
+  over the frozen trees): **approved**, authority burned by acknowledgement. Two
+  process facts learned the hard way: a START with no explicit `baseRef` derives
+  the base as the release commit itself and the candidate comes out empty
+  (`empty_candidate_base_ref_required`), so a release commit needs the
+  `baseRef` + `committedOnly` pair; and a reviewer group rejects bindings that
+  were not copied verbatim from one fresh STATUS, so re-read STATUS rather than
+  retyping a binding.

@@ -1,6 +1,7 @@
 # Decision: publishing `repack-atlas` to npm
 
-**Status: published.** `@callstack/repack-atlas@0.1.0` is on npm (tag `v0.1.0`).
+**Status: published.** `@callstack/repack-atlas` is on npm. Latest `0.1.1`
+(tag `v0.1.1`, 2026-10-20); first release `0.1.0` (tag `v0.1.0`, 2026-10-15).
 This document records what was verified, what is decided, and what is still
 open, so each release is a deliberate act and not an experiment. Sections that
 say "before the first publish" describe the state the first release started
@@ -190,15 +191,27 @@ fresh OTP; `npm view @callstack/repack-atlas version` answers `0.1.0` and
 `v0.1.0` is tagged. The published tarball's sha256 matched the local `pnpm pack`
 and the G6 hash, so the artifact users install is the one the gates tested.
 
-Latest observed preflight before that publish, on `0.1.0`:
+**Released 2026-10-20.** #81 merged as `72ef823`; `changeset version` on a clean
+`main` produced `0.1.0 -> 0.1.1` (`29c66db`), the first release to carry a
+`pr:` reference end to end, so the CHANGELOG line linked the PR, the commit and
+the author. The human ran `npm login` first: the stored token had expired, and
+`npm whoami` answered E401 while public reads and tarball installs kept working,
+which is why the gates still ran and only the publish was blocked. Then
+`pnpm publish` with a fresh OTP. Proven landed rather than trusted: the version
+URL answers 200, `dist-tags.latest` is `0.1.1`, a fresh install prints
+`repack-atlas 0.1.1`, and the downloaded tarball's sha256 equals the local
+`pnpm pack` and the G6 hash. This is also the release that refreshed the npm
+page README, which had kept the pre-`0.1.0` wording since the first publish.
+
+Latest observed preflight, on the `0.1.1` release commit `29c66db`, exit 0:
 
 ```
 G1 manifest        PASS 247 packaged file(s)
-G2 install         PASS fresh project installed @callstack/repack-atlas@0.1.0
-G3 bin             PASS repack-atlas 0.1.0 via node_modules/.bin
+G2 install         PASS fresh project installed @callstack/repack-atlas@0.1.1
+G3 bin             PASS repack-atlas 0.1.1 via node_modules/.bin
 G4 public API      PASS plugin, introspection -> function
 G5 behavior        PASS drift fixture -> 1 + SHARED_VERSION_DRIFT; clean fixture -> 0
-G6 reproducibility PASS two packs identical (fc7b2644933e…)
+G6 reproducibility PASS two packs identical (922703e435d6...)
 ```
 
 The hash is a property of the tree, so it moves whenever a file changes; read it

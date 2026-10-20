@@ -52,7 +52,9 @@ step 1, all cheap:
   see the credit matrix in the decision doc §3). Fix the changeset, not the
   changelog.
 - **Version is new**: `npm view <name> version` prints what is already on the
-  registry (`0.1.0` since 2026-10-15), and the bump must be above it. A `404`
+  registry (the decision doc sections 1 and 2 carry the current published
+  version), and
+  the bump must be above it. A `404`
   returned right after a publish is the CDN's negative cache, not a missing
   release — see "Prove it landed" before believing either answer.
 
